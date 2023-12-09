@@ -96,11 +96,16 @@ You can just simply select the desired image.
 
 ### Select Multiple Images
 
+If you want to select multiple images, you can use `SelectionMode.Multiple()`. And you can set the maximum number of images to select.
+If you didn't set max selection, the default value is maximum number that the system supports.
+
 ```kotlin
 val scope = rememberCoroutineScope()
 
 val multipleImagePicker = rememberImagePickerLauncher(
-    selectionMode = SelectionMode.Multiple,
+    // If you want to set max selection, you can use SelectionMode.Multiple(maxSelection = 5).
+    // If you didn't set max selection, the default value is maximum number that the system supports.
+    selectionMode = SelectionMode.Multiple(),
     scope = scope,
     onResult = { byteArrays ->
         // Do something.
