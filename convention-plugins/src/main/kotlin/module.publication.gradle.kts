@@ -19,7 +19,7 @@ publishing {
         // Provide artifacts information required by Maven Central
         pom {
             name.set("peekaboo")
-            description.set("Kotlin Multiplatform library for Compose Multiplatform enabling easy reading of various files like CSV, HTML into byte arrays on iOS and Android devices.")
+            description.set("Kotlin Multiplatform library for Compose Multiplatform, designed for seamless integration of an image picker feature in iOS and Android applications.")
             url.set("https://github.com/TEAM-PREAT/peekaboo")
 
             licenses {
