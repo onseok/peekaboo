@@ -17,11 +17,13 @@ Please note that it primarily focuses on these platforms, and additional platfor
 When using `Peekaboo` on Android, ensure that Google's Jetpack Compose version is compatible with Peekaboo's Compose Multiplatform version.
 Presently, the only available artifact is `peekaboo-image-picker`, but the intention is to gradually expand the range of features and artifacts over time.
 
-### Installation
+## Installation
 
 The minimum supported Android SDK is 24 (Android 7.0).
 
-Add `peekaboo` as a dependency to your project in `commonMain`. It's available on Maven Central.
+In your `commonMain` configuration, add `peekaboo` as a dependency to your project. It's available on Maven Central. 
+
+### Without Version Catalog
 
 ```kotlin
 commonMain {
@@ -31,7 +33,30 @@ commonMain {
 }
 ```
 
-#### Artifacts
+
+### With Version Catalog
+
+First, define the version in `libs.versions.toml`:
+
+```toml
+[versions]
+peekaboo = "0.1.1"
+
+[libraries]
+peekaboo-image-picker = { module = "io.github.team-preat:peekaboo-image-picker", version.ref = "peekaboo" }
+```
+
+Then, in your `commonMain` configuration, reference the defined version:
+
+```kotlin
+commonMain {
+    dependencies {
+        implementation(libs.peekaboo.image.picker)
+    }
+}
+```
+
+### Artifacts
 
 | Name                    | Description                                                                 |
 |-------------------------|-----------------------------------------------------------------------------|
