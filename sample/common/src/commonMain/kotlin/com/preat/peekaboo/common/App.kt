@@ -25,18 +25,20 @@ fun App() {
         scope = scope,
         onResult = { byteArrays ->
             byteArrays.firstOrNull()?.let {
-                // Do something.
+                // Process the selected images' ByteArrays.
                 println(it)
             }
         }
     )
 
     val multipleImagePicker = rememberImagePickerLauncher(
-        selectionMode = SelectionMode.Multiple(),
+        // Optional: Set a maximum selection limit, e.g., SelectionMode.Multiple(maxSelection = 5).
+        // Default: No limit, depends on system's maximum capacity.
+        selectionMode = SelectionMode.Multiple(maxSelection = 5),
         scope = scope,
         onResult = { byteArrays ->
             byteArrays.forEach {
-                // Do something.
+                // Process the selected images' ByteArrays.
                 println(it)
             }
         }

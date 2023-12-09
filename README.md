@@ -73,7 +73,7 @@ val singleImagePicker = rememberImagePickerLauncher(
     scope = scope,
     onResult = { byteArrays ->
         byteArrays.firstOrNull()?.let {
-            // Do something.
+            // Process the selected images' ByteArrays.
             println(it)
         }
     }
@@ -92,7 +92,7 @@ Button(
 |-----------------------------------------------------------------|---------------------------------------------------------|
 | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/a655bfd0-0499-4e30-879f-5155a2685928" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/350fffd7-6d25-45e6-8be2-de86ff5e8d82" width="300" height="700"> |
 
-You can just simply select the desired image.
+Simply select the desired image with an intuitive interface.
 
 ### Select Multiple Images
 
@@ -103,13 +103,15 @@ If you didn't set max selection, the default value is maximum number that the sy
 val scope = rememberCoroutineScope()
 
 val multipleImagePicker = rememberImagePickerLauncher(
-    // If you want to set max selection, you can use SelectionMode.Multiple(maxSelection = 5).
-    // If you didn't set max selection, the default value is maximum number that the system supports.
-    selectionMode = SelectionMode.Multiple(),
+    // Optional: Set a maximum selection limit, e.g., SelectionMode.Multiple(maxSelection = 5).
+    // Default: No limit, depends on system's maximum capacity.
+    selectionMode = SelectionMode.Multiple(maxSelection = 5),
     scope = scope,
     onResult = { byteArrays ->
-        // Do something.
-        println(byteArrays)
+        byteArrays.forEach {
+            // Process the selected images' ByteArrays.
+            println(it)
+        }
     }
 )
 
@@ -125,6 +127,15 @@ Button(
 | Android                                                         | iOS                                                     |
 |-----------------------------------------------------------------|---------------------------------------------------------|
 | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/3090cbff-36d8-462b-9b36-af07efe5e253" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/06203301-eb41-4a05-b0ac-812b60731274" width="300" height="700"> |
+
+## ByteArray to ImageBitmap Conversion
+We've added a new extension function `toImageBitmap()` to convert a `ByteArray` into an `ImageBitmap`.
+This function simplifies the process of converting image data into a displayable format, enhancing the app's capability to handle image processing efficiently.
+
+### Usage
+```kotlin
+val imageBitmap = byteArray.toImageBitmap()
+```
 
 ## Contributions
 
