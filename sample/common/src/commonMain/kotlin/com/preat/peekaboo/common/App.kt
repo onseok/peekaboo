@@ -35,8 +35,10 @@ fun App() {
         selectionMode = SelectionMode.Multiple(),
         scope = scope,
         onResult = { byteArrays ->
-            // Do something.
-            println(byteArrays)
+            byteArrays.forEach {
+                // Do something.
+                println(it)
+            }
         }
     )
 
