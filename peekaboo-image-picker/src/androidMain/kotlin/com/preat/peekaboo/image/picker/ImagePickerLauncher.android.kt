@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.preat.peekaboo.image.picker.SelectionMode.Companion.INFINITY
 import kotlinx.coroutines.CoroutineScope
 
 @Composable
@@ -20,7 +21,7 @@ actual fun rememberImagePickerLauncher(
             onResult = onResult
         )
 
-        SelectionMode.Multiple -> pickMultipleImages(
+        is SelectionMode.Multiple -> pickMultipleImages(
             selectionMode = selectionMode,
             onResult = onResult
         )
@@ -61,13 +62,18 @@ private fun pickSingleImage(
 
 @Composable
 fun pickMultipleImages(
-    selectionMode: SelectionMode,
+    selectionMode: SelectionMode.Multiple,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
+    val maxSelection = if (selectionMode.maxSelection == INFINITY) {
+        getMaxItems()
+    } else {
+        selectionMode.maxSelection
+    }
 
     val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxSelection),
         onResult = { uriList ->
             val imageBytesList = uriList.mapNotNull { uri ->
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->

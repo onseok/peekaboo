@@ -12,7 +12,10 @@ expect fun rememberImagePickerLauncher(
 
 sealed class SelectionMode {
     data object Single : SelectionMode()
-    data object Multiple : SelectionMode()
+    data class Multiple(val maxSelection: Int = INFINITY) : SelectionMode()
+    companion object {
+        const val INFINITY = 0
+    }
 }
 
 expect class ImagePickerLauncher(

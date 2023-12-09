@@ -32,7 +32,7 @@ fun App() {
     )
 
     val multipleImagePicker = rememberImagePickerLauncher(
-        selectionMode = SelectionMode.Multiple,
+        selectionMode = SelectionMode.Multiple(),
         scope = scope,
         onResult = { byteArrays ->
             // Do something.
