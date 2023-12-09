@@ -70,8 +70,8 @@ private fun createPHPickerViewController(
 ): PHPickerViewController {
     val pickerViewController = PHPickerViewController(
         configuration = when (selection) {
-            SelectionMode.Multiple -> PHPickerConfiguration().apply {
-                setSelectionLimit(selectionLimit = 0)
+            is SelectionMode.Multiple -> PHPickerConfiguration().apply {
+                setSelectionLimit(selectionLimit = selection.maxSelection.toLong())
                 setFilter(filter = PHPickerFilter.imagesFilter)
                 setSelection(selection = PHPickerConfigurationSelectionOrdered)
             }
