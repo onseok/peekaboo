@@ -3,7 +3,7 @@ plugins {
 }
 
 allprojects {
-    group = "com.preat.peekaboo"
+    group = "io.github.team-preat"
     version = "0.1.0"
 }
 
