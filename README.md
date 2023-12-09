@@ -12,7 +12,7 @@
 
 ### Compose Multiplatform
 
-As of version 0.1.1, `Peekaboo` is based on `Compose Multiplatform`, currently targeting only `iOS` and `Android`.
+`peekaboo` is based on `Compose Multiplatform`, currently targeting only `iOS` and `Android`.
 Please note that it primarily focuses on these platforms, and additional platforms may be considered in the future.
 When using `Peekaboo` on Android, ensure that Google's Jetpack Compose version is compatible with Peekaboo's Compose Multiplatform version.
 Presently, the only available artifact is `peekaboo-image-picker`, but the intention is to gradually expand the range of features and artifacts over time.
