@@ -18,18 +18,24 @@ import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 @Composable
 fun App() {
 
+    val scope = rememberCoroutineScope()
+
     val singleImagePicker = rememberImagePickerLauncher(
         selectionMode = SelectionMode.Single,
-        scope = rememberCoroutineScope(),
+        scope = scope,
         onResult = { byteArrays ->
-            println(byteArrays)
+            byteArrays.firstOrNull()?.let {
+                // Do something.
+                println(it)
+            }
         }
     )
 
     val multipleImagePicker = rememberImagePickerLauncher(
         selectionMode = SelectionMode.Multiple,
-        scope = rememberCoroutineScope(),
+        scope = scope,
         onResult = { byteArrays ->
+            // Do something.
             println(byteArrays)
         }
     )
