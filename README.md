@@ -21,7 +21,7 @@ Presently, the only available artifact is `peekaboo-image-picker`, but the inten
 
 The minimum supported Android SDK is 24 (Android 7.0).
 
-In your `commonMain` configuration, add `peekaboo` as a dependency to your project. It's available on Maven Central. 
+In your `commonMain` configuration, add `peekaboo` as a dependency to your project. It's available on Maven Central.
 
 ### Without Version Catalog
 
@@ -40,7 +40,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.2.0"
+peekaboo = "0.2.1"
 
 [libraries]
 peekaboo-image-picker = { module = "io.github.team-preat:peekaboo-image-picker", version.ref = "peekaboo" }
