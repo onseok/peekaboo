@@ -15,6 +15,10 @@ import platform.PhotosUI.PHPickerViewController
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIApplication
 import platform.darwin.NSObject
+import platform.darwin.dispatch_group_create
+import platform.darwin.dispatch_group_enter
+import platform.darwin.dispatch_group_leave
+import platform.darwin.dispatch_group_notify
 import platform.posix.memcpy
 
 @Composable
@@ -34,19 +38,28 @@ actual fun rememberImagePickerLauncher(
                 @Suppress("UNCHECKED_CAST")
                 val results = didFinishPicking as List<PHPickerResult>
 
+                val dispatchGroup = dispatch_group_create()
+                val imageData = mutableListOf<ByteArray>()
+
                 for (result in results) {
+                    dispatch_group_enter(dispatchGroup)
                     result.itemProvider.loadDataRepresentationForTypeIdentifier(
                         typeIdentifier = "public.image",
                     ) { nsData, _ ->
                         scope?.launch(Dispatchers.Main) {
-                            val data = mutableListOf<ByteArray>()
                             nsData?.let {
                                 val bytes = ByteArray(it.length.toInt())
                                 memcpy(bytes.refTo(0), it.bytes, it.length)
-                                data.add(bytes)
+                                imageData.add(bytes)
                             }
-                            onResult(data.toList())
+                            dispatch_group_leave(dispatchGroup)
                         }
+                    }
+                }
+
+                dispatch_group_notify(dispatchGroup, platform.darwin.dispatch_get_main_queue()) {
+                    scope?.launch(Dispatchers.Main) {
+                        onResult(imageData)
                     }
                 }
             }
