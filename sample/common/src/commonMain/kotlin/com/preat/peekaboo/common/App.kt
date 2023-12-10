@@ -54,9 +54,10 @@ fun App() {
             selectionMode = SelectionMode.Multiple(maxSelection = 5),
             scope = scope,
             onResult = { byteArrays ->
-                images = byteArrays.map { byteArray ->
-                    byteArray.toImageBitmap()
-                }
+                images =
+                    byteArrays.map { byteArray ->
+                        byteArray.toImageBitmap()
+                    }
             },
         )
 
@@ -74,10 +75,11 @@ fun App() {
                     Image(
                         bitmap = image,
                         contentDescription = "Selected Image",
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
+                        modifier =
+                            Modifier
+                                .size(100.dp)
+                                .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
                     )
                 }
             }
