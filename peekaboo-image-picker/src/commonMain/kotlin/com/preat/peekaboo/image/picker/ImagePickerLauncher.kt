@@ -7,12 +7,14 @@ import kotlinx.coroutines.CoroutineScope
 expect fun rememberImagePickerLauncher(
     selectionMode: SelectionMode = SelectionMode.Single,
     scope: CoroutineScope?,
-    onResult: (List<ByteArray>) -> Unit
+    onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher
 
 sealed class SelectionMode {
     data object Single : SelectionMode()
+
     data class Multiple(val maxSelection: Int = INFINITY) : SelectionMode()
+
     companion object {
         const val INFINITY = 0
     }
@@ -20,7 +22,7 @@ sealed class SelectionMode {
 
 expect class ImagePickerLauncher(
     selectionMode: SelectionMode,
-    onLaunch: () -> Unit
+    onLaunch: () -> Unit,
 ) {
     fun launch()
 }

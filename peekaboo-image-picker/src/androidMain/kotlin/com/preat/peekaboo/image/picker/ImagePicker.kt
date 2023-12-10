@@ -18,8 +18,9 @@ internal fun isSystemPickerAvailable(): Boolean {
 }
 
 @SuppressLint("NewApi", "ClassVerificationFailure")
-internal fun getMaxItems() =  if (isSystemPickerAvailable()) {
-    MediaStore.getPickImagesMaxLimit()
-} else {
-    Integer.MAX_VALUE
-}
+internal fun getMaxItems() =
+    if (isSystemPickerAvailable()) {
+        MediaStore.getPickImagesMaxLimit()
+    } else {
+        Integer.MAX_VALUE
+    }

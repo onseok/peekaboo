@@ -16,15 +16,17 @@ actual fun rememberImagePickerLauncher(
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     return when (selectionMode) {
-        SelectionMode.Single -> pickSingleImage(
-            selectionMode = selectionMode,
-            onResult = onResult
-        )
+        SelectionMode.Single ->
+            pickSingleImage(
+                selectionMode = selectionMode,
+                onResult = onResult,
+            )
 
-        is SelectionMode.Multiple -> pickMultipleImages(
-            selectionMode = selectionMode,
-            onResult = onResult
-        )
+        is SelectionMode.Multiple ->
+            pickMultipleImages(
+                selectionMode = selectionMode,
+                onResult = onResult,
+            )
     }
 }
 
@@ -35,27 +37,28 @@ private fun pickSingleImage(
 ): ImagePickerLauncher {
     val context = LocalContext.current
 
-    val singleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            uri?.let {
-                with(context.contentResolver) {
-                    openInputStream(uri)?.use {
-                        onResult(listOf(it.readBytes()))
+    val singleImagePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(),
+            onResult = { uri ->
+                uri?.let {
+                    with(context.contentResolver) {
+                        openInputStream(uri)?.use {
+                            onResult(listOf(it.readBytes()))
+                        }
                     }
                 }
-            }
-        }
-    )
+            },
+        )
 
     return remember {
         ImagePickerLauncher(
             selectionMode = selectionMode,
             onLaunch = {
                 singleImagePickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                 )
-            }
+            },
         )
     }
 }
@@ -66,34 +69,37 @@ fun pickMultipleImages(
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
-    val maxSelection = if (selectionMode.maxSelection == INFINITY) {
-        getMaxItems()
-    } else {
-        selectionMode.maxSelection
-    }
-
-    val multipleImagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxSelection),
-        onResult = { uriList ->
-            val imageBytesList = uriList.mapNotNull { uri ->
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.readBytes()
-                }
-            }
-            if (imageBytesList.isNotEmpty()) {
-                onResult(imageBytesList)
-            }
+    val maxSelection =
+        if (selectionMode.maxSelection == INFINITY) {
+            getMaxItems()
+        } else {
+            selectionMode.maxSelection
         }
-    )
+
+    val multipleImagePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickMultipleVisualMedia(maxSelection),
+            onResult = { uriList ->
+                val imageBytesList =
+                    uriList.mapNotNull { uri ->
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            inputStream.readBytes()
+                        }
+                    }
+                if (imageBytesList.isNotEmpty()) {
+                    onResult(imageBytesList)
+                }
+            },
+        )
 
     return remember {
         ImagePickerLauncher(
             selectionMode = selectionMode,
             onLaunch = {
                 multipleImagePickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                 )
-            }
+            },
         )
     }
 }

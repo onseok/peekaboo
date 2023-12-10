@@ -21,33 +21,36 @@ import platform.posix.memcpy
 actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
     scope: CoroutineScope?,
-    onResult: (List<ByteArray>) -> Unit
+    onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
-
     @OptIn(ExperimentalForeignApi::class)
-    val delegate = object : NSObject(), PHPickerViewControllerDelegateProtocol {
-        override fun picker(picker: PHPickerViewController, didFinishPicking: List<*>) {
-            picker.dismissViewControllerAnimated(flag = true, completion = null)
-            @Suppress("UNCHECKED_CAST")
-            val results = didFinishPicking as List<PHPickerResult>
+    val delegate =
+        object : NSObject(), PHPickerViewControllerDelegateProtocol {
+            override fun picker(
+                picker: PHPickerViewController,
+                didFinishPicking: List<*>,
+            ) {
+                picker.dismissViewControllerAnimated(flag = true, completion = null)
+                @Suppress("UNCHECKED_CAST")
+                val results = didFinishPicking as List<PHPickerResult>
 
-            for (result in results) {
-                result.itemProvider.loadDataRepresentationForTypeIdentifier(
-                    typeIdentifier = "public.image"
-                ) { nsData, _ ->
-                    scope?.launch(Dispatchers.Main) {
-                        val data = mutableListOf<ByteArray>()
-                        nsData?.let {
-                            val bytes = ByteArray(it.length.toInt())
-                            memcpy(bytes.refTo(0), it.bytes, it.length)
-                            data.add(bytes)
+                for (result in results) {
+                    result.itemProvider.loadDataRepresentationForTypeIdentifier(
+                        typeIdentifier = "public.image",
+                    ) { nsData, _ ->
+                        scope?.launch(Dispatchers.Main) {
+                            val data = mutableListOf<ByteArray>()
+                            nsData?.let {
+                                val bytes = ByteArray(it.length.toInt())
+                                memcpy(bytes.refTo(0), it.bytes, it.length)
+                                data.add(bytes)
+                            }
+                            onResult(data.toList())
                         }
-                        onResult(data.toList())
                     }
                 }
             }
         }
-    }
 
     return remember {
         ImagePickerLauncher(
@@ -57,31 +60,35 @@ actual fun rememberImagePickerLauncher(
                 UIApplication.sharedApplication.keyWindow?.rootViewController?.presentViewController(
                     pickerController,
                     true,
-                    null
+                    null,
                 )
-            }
+            },
         )
     }
 }
 
 private fun createPHPickerViewController(
     delegate: PHPickerViewControllerDelegateProtocol,
-    selection: SelectionMode
+    selection: SelectionMode,
 ): PHPickerViewController {
-    val pickerViewController = PHPickerViewController(
-        configuration = when (selection) {
-            is SelectionMode.Multiple -> PHPickerConfiguration().apply {
-                setSelectionLimit(selectionLimit = selection.maxSelection.toLong())
-                setFilter(filter = PHPickerFilter.imagesFilter)
-                setSelection(selection = PHPickerConfigurationSelectionOrdered)
-            }
-            SelectionMode.Single -> PHPickerConfiguration().apply {
-                setSelectionLimit(selectionLimit = 1)
-                setFilter(filter = PHPickerFilter.imagesFilter)
-                setSelection(selection = PHPickerConfigurationSelectionOrdered)
-            }
-        }
-    )
+    val pickerViewController =
+        PHPickerViewController(
+            configuration =
+                when (selection) {
+                    is SelectionMode.Multiple ->
+                        PHPickerConfiguration().apply {
+                            setSelectionLimit(selectionLimit = selection.maxSelection.toLong())
+                            setFilter(filter = PHPickerFilter.imagesFilter)
+                            setSelection(selection = PHPickerConfigurationSelectionOrdered)
+                        }
+                    SelectionMode.Single ->
+                        PHPickerConfiguration().apply {
+                            setSelectionLimit(selectionLimit = 1)
+                            setFilter(filter = PHPickerFilter.imagesFilter)
+                            setSelection(selection = PHPickerConfigurationSelectionOrdered)
+                        }
+                },
+        )
     pickerViewController.delegate = delegate
     return pickerViewController
 }
