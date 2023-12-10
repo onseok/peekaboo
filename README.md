@@ -61,6 +61,7 @@ commonMain {
 | Name                    | Description                                                                 |
 |-------------------------|-----------------------------------------------------------------------------|
 | `peekaboo-image-picker` | Simplifies the process of selecting single or multiple images in `iOS` and `Android` apps. |
+| `peekaboo-camera-picker` | 🚧 Coming soon! A convenient way to capture and select images directly from cameras on iOS and Android. 📸 |
 
 ## Usage
 ### Select Single Image
