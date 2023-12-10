@@ -6,6 +6,8 @@ compose-compiler = "1.5.4"
 compose-material3 = "1.1.2"
 androidx-activityCompose = "1.8.1"
 nexus-publish = "2.0.0-rc-1"
+spotless = "6.23.3"
+ktlint = "1.0.1"
 
 android-minSdk = "24"
 android-compileSdk = "34"
@@ -38,3 +40,4 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
