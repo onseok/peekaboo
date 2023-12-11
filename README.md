@@ -40,7 +40,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.2.1"
+peekaboo = "0.2.0"
 
 [libraries]
 peekaboo-image-picker = { module = "io.github.team-preat:peekaboo-image-picker", version.ref = "peekaboo" }
@@ -91,7 +91,7 @@ Button(
 
 | Android                                                         | iOS                                                     |
 |-----------------------------------------------------------------|---------------------------------------------------------|
-| <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/a655bfd0-0499-4e30-879f-5155a2685928" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/350fffd7-6d25-45e6-8be2-de86ff5e8d82" width="300" height="700"> |
+| <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/03346992-cf2a-4424-88e5-fa53afd36eac" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/7b562f6f-e5d5-4858-85b8-acf7196d646f" width="300" height="700"> |
 
 Simply select the desired image with an intuitive interface.
 
@@ -127,7 +127,8 @@ Button(
 
 | Android                                                         | iOS                                                     |
 |-----------------------------------------------------------------|---------------------------------------------------------|
-| <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/3090cbff-36d8-462b-9b36-af07efe5e253" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/06203301-eb41-4a05-b0ac-812b60731274" width="300" height="700"> |
+| <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/e26ae1b3-4333-41a9-92c3-ebe56c337d79" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/a990ce09-d485-4a0f-9416-8af8b040cf2d" width="300" height="700"> |
+
 
 ## ByteArray to ImageBitmap Conversion
 We've added a new extension function `toImageBitmap()` to convert a `ByteArray` into an `ImageBitmap`.
