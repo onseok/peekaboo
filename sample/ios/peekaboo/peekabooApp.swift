@@ -13,6 +13,7 @@ struct peekabooApp: App {
     var body: some Scene {
         WindowGroup {
             ComposeView()
+                .ignoresSafeArea(.all, edges: .bottom)
         }
     }
 }

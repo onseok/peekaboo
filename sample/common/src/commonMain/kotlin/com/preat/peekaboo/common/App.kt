@@ -13,6 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Scaffold
+import androidx.compose.material.SnackbarHost
+import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,15 +29,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.preat.peekaboo.camera.rememberCameraCaptureLauncher
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import com.preat.peekaboo.image.picker.toImageBitmap
+import kotlinx.coroutines.launch
 
 @Suppress("FunctionName")
 @Composable
 fun App() {
     val scope = rememberCoroutineScope()
     var images by remember { mutableStateOf(listOf<ImageBitmap>()) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val singleImagePicker =
         rememberImagePickerLauncher(
@@ -61,42 +67,70 @@ fun App() {
             },
         )
 
-    MaterialTheme {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(images) { image ->
-                    Image(
-                        bitmap = image,
-                        contentDescription = "Selected Image",
-                        modifier =
-                            Modifier
-                                .size(100.dp)
-                                .clip(CircleShape),
-                        contentScale = ContentScale.Crop,
+    val cameraCaptureLauncher =
+        rememberCameraCaptureLauncher(
+            scope = scope,
+            onResult = {
+                it?.let { capturedImage ->
+                    images = listOf(capturedImage.toImageBitmap())
+                }
+            },
+            onCameraPermissionDenied = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message =
+                            "Camera permission has been denied.\n" +
+                                "To use the camera, please change the settings.",
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(
-                onClick = {
-                    singleImagePicker.launch()
-                },
+            },
+        )
+
+    MaterialTheme {
+        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text("Pick Single Image")
-            }
-            Button(
-                onClick = {
-                    multipleImagePicker.launch()
-                },
-            ) {
-                Text("Pick Multiple Images")
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(images) { image ->
+                        Image(
+                            bitmap = image,
+                            contentDescription = "Selected Image",
+                            modifier =
+                                Modifier
+                                    .size(100.dp)
+                                    .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(
+                    onClick = {
+                        singleImagePicker.launch()
+                    },
+                ) {
+                    Text("Pick Single Image")
+                }
+                Button(
+                    onClick = {
+                        multipleImagePicker.launch()
+                    },
+                ) {
+                    Text("Pick Multiple Images")
+                }
+                Button(
+                    onClick = {
+                        cameraCaptureLauncher.launch()
+                    },
+                ) {
+                    Text("Capture Camera Image")
+                }
             }
         }
     }
