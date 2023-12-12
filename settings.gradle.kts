@@ -25,6 +25,7 @@ dependencyResolutionManagement {
 rootProject.name = "peekaboo"
 include(
     ":peekaboo-image-picker",
+    ":peekaboo-camera",
     ":sample:android",
     ":sample:common",
 )
