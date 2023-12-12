@@ -44,6 +44,7 @@ kotlin {
 
                 // peekaboo
                 implementation(projects.peekabooImagePicker)
+                implementation(projects.peekabooCamera)
             }
         }
 
