@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		340D7E452B24339A00627F7D /* peekabooApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340D7E442B24339A00627F7D /* peekabooApp.swift */; };
-		340D7E472B24339A00627F7D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340D7E462B24339A00627F7D /* ContentView.swift */; };
 		340D7E492B24339B00627F7D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 340D7E482B24339B00627F7D /* Assets.xcassets */; };
 		340D7E4C2B24339B00627F7D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 340D7E4B2B24339B00627F7D /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -16,7 +15,6 @@
 /* Begin PBXFileReference section */
 		340D7E412B24339A00627F7D /* peekaboo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = peekaboo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		340D7E442B24339A00627F7D /* peekabooApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = peekabooApp.swift; sourceTree = "<group>"; };
-		340D7E462B24339A00627F7D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		340D7E482B24339B00627F7D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		340D7E4B2B24339B00627F7D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		34301AE02B29A947000D8091 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -54,7 +52,6 @@
 			children = (
 				34301AE02B29A947000D8091 /* Info.plist */,
 				340D7E442B24339A00627F7D /* peekabooApp.swift */,
-				340D7E462B24339A00627F7D /* ContentView.swift */,
 				340D7E482B24339B00627F7D /* Assets.xcassets */,
 				340D7E4A2B24339B00627F7D /* Preview Content */,
 			);
@@ -160,7 +157,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				340D7E472B24339A00627F7D /* ContentView.swift in Sources */,
 				340D7E452B24339A00627F7D /* peekabooApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -306,6 +302,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -343,6 +340,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
