@@ -19,6 +19,7 @@
 		340D7E462B24339A00627F7D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		340D7E482B24339B00627F7D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		340D7E4B2B24339B00627F7D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		34301AE02B29A947000D8091 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +52,7 @@
 		340D7E432B24339A00627F7D /* peekaboo */ = {
 			isa = PBXGroup;
 			children = (
+				34301AE02B29A947000D8091 /* Info.plist */,
 				340D7E442B24339A00627F7D /* peekabooApp.swift */,
 				340D7E462B24339A00627F7D /* ContentView.swift */,
 				340D7E482B24339B00627F7D /* Assets.xcassets */,
@@ -297,6 +299,7 @@
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../common/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = peekaboo/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses camera for capturing photos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -333,6 +336,7 @@
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/../common/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = peekaboo/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses camera for capturing photos";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
