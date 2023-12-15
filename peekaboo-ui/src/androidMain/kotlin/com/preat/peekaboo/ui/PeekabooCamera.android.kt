@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -35,7 +36,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
-import com.preat.peekaboo.ui.icon.IconPhotoCamera
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
@@ -51,6 +51,7 @@ private val executor = Executors.newSingleThreadExecutor()
 actual fun PeekabooCamera(
     modifier: Modifier,
     cameraMode: CameraMode,
+    captureIcon: ImageVector,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val cameraPermissionState =
@@ -59,7 +60,7 @@ actual fun PeekabooCamera(
         )
     when (cameraPermissionState.status) {
         PermissionStatus.Granted -> {
-            CameraWithGrantedPermission(modifier, cameraMode, onCapture)
+            CameraWithGrantedPermission(modifier, cameraMode, captureIcon, onCapture)
         }
         is PermissionStatus.Denied -> {
             LaunchedEffect(Unit) {
@@ -74,6 +75,7 @@ actual fun PeekabooCamera(
 private fun CameraWithGrantedPermission(
     modifier: Modifier,
     cameraMode: CameraMode,
+    captureIcon: ImageVector,
     onCapture: (byteArray: ByteArray) -> Unit,
 ) {
     val context = LocalContext.current
@@ -150,7 +152,7 @@ private fun CameraWithGrantedPermission(
             modifier = Modifier.fillMaxSize(),
         )
         CircularButton(
-            imageVector = IconPhotoCamera,
+            imageVector = captureIcon,
             modifier = Modifier.align(Alignment.BottomCenter).padding(36.dp),
             enabled = !capturePhotoStarted,
         ) {

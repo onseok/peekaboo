@@ -18,9 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.unit.dp
-import com.preat.peekaboo.ui.icon.IconPhotoCamera
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -98,6 +98,7 @@ private val deviceTypes =
 actual fun PeekabooCamera(
     modifier: Modifier,
     cameraMode: CameraMode,
+    captureIcon: ImageVector,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
@@ -137,7 +138,7 @@ actual fun PeekabooCamera(
             }
 
             CameraAccess.Authorized -> {
-                AuthorizedCamera(cameraMode, onCapture)
+                AuthorizedCamera(cameraMode, captureIcon, onCapture)
             }
         }
     }
@@ -147,6 +148,7 @@ actual fun PeekabooCamera(
 @Composable
 private fun BoxScope.AuthorizedCamera(
     cameraMode: CameraMode,
+    captureIcon: ImageVector,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val camera: AVCaptureDevice? =
@@ -162,7 +164,7 @@ private fun BoxScope.AuthorizedCamera(
             ).devices.firstOrNull() as? AVCaptureDevice
         }
     if (camera != null) {
-        RealDeviceCamera(camera, onCapture)
+        RealDeviceCamera(camera, captureIcon, onCapture)
     } else {
         Text(
             """
@@ -179,6 +181,7 @@ private fun BoxScope.AuthorizedCamera(
 @Composable
 private fun BoxScope.RealDeviceCamera(
     camera: AVCaptureDevice,
+    captureIcon: ImageVector,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
@@ -360,7 +363,7 @@ private fun BoxScope.RealDeviceCamera(
         },
     )
     CircularButton(
-        imageVector = IconPhotoCamera,
+        imageVector = captureIcon,
         modifier =
             Modifier
                 .align(Alignment.BottomCenter)
