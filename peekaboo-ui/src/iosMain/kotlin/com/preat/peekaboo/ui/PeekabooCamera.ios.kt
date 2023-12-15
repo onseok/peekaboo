@@ -26,6 +26,7 @@ import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
@@ -60,6 +61,9 @@ import platform.AVFoundation.fileDataRepresentation
 import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSize
+import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
@@ -69,7 +73,11 @@ import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.UIDevice
 import platform.UIKit.UIDeviceOrientation
+import platform.UIKit.UIGraphicsBeginImageContextWithOptions
+import platform.UIKit.UIGraphicsEndImageContext
+import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
 import platform.UIKit.UIImage
+import platform.UIKit.UIImageOrientation
 import platform.UIKit.UIImagePNGRepresentation
 import platform.UIKit.UIView
 import platform.darwin.NSObject
@@ -181,12 +189,77 @@ private fun BoxScope.RealDeviceCamera(
                 ) {
                     val photoData = didFinishProcessingPhoto.fileDataRepresentation()
                     if (photoData != null) {
-                        val uiImage = UIImage(photoData)
+                        var uiImage = UIImage(photoData)
+                        if (uiImage.imageOrientation != UIImageOrientation.UIImageOrientationUp) {
+                            UIGraphicsBeginImageContextWithOptions(uiImage.size, false, uiImage.scale)
+                            uiImage.drawInRect(
+                                CGRectMake(
+                                    x = 0.0,
+                                    y = 0.0,
+                                    width = uiImage.size.useContents { width },
+                                    height = uiImage.size.useContents { height },
+                                ),
+                            )
+                            val normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+                            UIGraphicsEndImageContext()
+                            uiImage = normalizedImage!!
+                        }
                         val imageData = UIImagePNGRepresentation(uiImage)
                         val byteArray: ByteArray? = imageData?.toByteArray()
                         onCapture(byteArray)
                     }
                     capturePhotoStarted = false
+                }
+
+                @OptIn(ExperimentalForeignApi::class)
+                private fun UIImage.fitInto(px: Int): UIImage {
+                    val targetScale =
+                        maxOf(
+                            px.toFloat() / size.useContents { width },
+                            px.toFloat() / size.useContents { height },
+                        )
+                    val newSize =
+                        size.useContents { CGSizeMake(width * targetScale, height * targetScale) }
+                    return resize(newSize)
+                }
+
+                @OptIn(ExperimentalForeignApi::class)
+                private fun UIImage.resize(targetSize: CValue<CGSize>): UIImage {
+                    val currentSize = this.size
+                    val widthRatio =
+                        targetSize.useContents { width } / currentSize.useContents { width }
+                    val heightRatio =
+                        targetSize.useContents { height } / currentSize.useContents { height }
+
+                    val newSize: CValue<CGSize> =
+                        if (widthRatio > heightRatio) {
+                            CGSizeMake(
+                                width = currentSize.useContents { width } * heightRatio,
+                                height = currentSize.useContents { height } * heightRatio,
+                            )
+                        } else {
+                            CGSizeMake(
+                                width = currentSize.useContents { width } * widthRatio,
+                                height = currentSize.useContents { height } * widthRatio,
+                            )
+                        }
+                    val newRect =
+                        CGRectMake(
+                            x = 0.0,
+                            y = 0.0,
+                            width = newSize.useContents { width },
+                            height = newSize.useContents { height },
+                        )
+                    UIGraphicsBeginImageContextWithOptions(
+                        size = newSize,
+                        opaque = false,
+                        scale = 1.0,
+                    )
+                    this.drawInRect(newRect)
+                    val newImage = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+
+                    return newImage!!
                 }
             }
         }
