@@ -50,6 +50,7 @@ private val executor = Executors.newSingleThreadExecutor()
 @Composable
 actual fun PeekabooCamera(
     modifier: Modifier,
+    cameraMode: CameraMode,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val cameraPermissionState =
@@ -58,7 +59,7 @@ actual fun PeekabooCamera(
         )
     when (cameraPermissionState.status) {
         PermissionStatus.Granted -> {
-            CameraWithGrantedPermission(modifier, onCapture)
+            CameraWithGrantedPermission(modifier, cameraMode, onCapture)
         }
         is PermissionStatus.Denied -> {
             LaunchedEffect(Unit) {
@@ -72,6 +73,7 @@ actual fun PeekabooCamera(
 @Composable
 private fun CameraWithGrantedPermission(
     modifier: Modifier,
+    cameraMode: CameraMode,
     onCapture: (byteArray: ByteArray) -> Unit,
 ) {
     val context = LocalContext.current
@@ -81,7 +83,14 @@ private fun CameraWithGrantedPermission(
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
-    var isFrontCamera by rememberSaveable { mutableStateOf(false) }
+    var isFrontCamera by rememberSaveable {
+        mutableStateOf(
+            when (cameraMode) {
+                CameraMode.Front -> true
+                CameraMode.Back -> false
+            },
+        )
+    }
     val cameraSelector =
         remember(isFrontCamera) {
             val lensFacing =
@@ -129,7 +138,7 @@ private fun CameraWithGrantedPermission(
         modifier =
             modifier
                 .pointerInput(isFrontCamera) {
-                    detectHorizontalDragGestures { change, dragAmount ->
+                    detectHorizontalDragGestures { _, dragAmount ->
                         if (dragAmount.absoluteValue > 50.0) {
                             isFrontCamera = !isFrontCamera
                         }

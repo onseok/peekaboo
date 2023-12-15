@@ -7,5 +7,6 @@ import androidx.compose.ui.Modifier
 @Composable
 expect fun PeekabooCamera(
     modifier: Modifier,
+    cameraMode: CameraMode = CameraMode.Back,
     onCapture: (byteArray: ByteArray?) -> Unit,
 )

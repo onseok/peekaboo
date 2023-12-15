@@ -32,6 +32,7 @@ import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import com.preat.peekaboo.image.picker.toImageBitmap
 import com.preat.peekaboo.ui.BackButton
+import com.preat.peekaboo.ui.CameraMode
 import com.preat.peekaboo.ui.PeekabooCamera
 import com.preat.peekaboo.ui.style.PeekabooTheme
 import kotlinx.coroutines.launch
@@ -81,13 +82,14 @@ fun App() {
                         if (showCamera) {
                             PeekabooCamera(
                                 modifier = Modifier.fillMaxSize(),
+                                cameraMode = CameraMode.Back,
                                 onCapture = { byteArray ->
                                     byteArray?.let {
                                         images = listOf(it.toImageBitmap())
                                     } ?: scope.launch {
                                         snackbarHostState.showSnackbar(
                                             message =
-                                                "Error occurred.",
+                                                "Unable to capture the image. Please try again.",
                                         )
                                     }
                                     showCamera = false

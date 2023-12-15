@@ -36,6 +36,7 @@ import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVCaptureDeviceDiscoverySession.Companion.discoverySessionWithDeviceTypes
 import platform.AVFoundation.AVCaptureDeviceInput
 import platform.AVFoundation.AVCaptureDeviceInput.Companion.deviceInputWithDevice
+import platform.AVFoundation.AVCaptureDevicePositionBack
 import platform.AVFoundation.AVCaptureDevicePositionFront
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDualCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDualWideCamera
@@ -96,6 +97,7 @@ private val deviceTypes =
 @Composable
 actual fun PeekabooCamera(
     modifier: Modifier,
+    cameraMode: CameraMode,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
@@ -135,7 +137,7 @@ actual fun PeekabooCamera(
             }
 
             CameraAccess.Authorized -> {
-                AuthorizedCamera(onCapture)
+                AuthorizedCamera(cameraMode, onCapture)
             }
         }
     }
@@ -143,13 +145,20 @@ actual fun PeekabooCamera(
 
 @Suppress("FunctionName")
 @Composable
-private fun BoxScope.AuthorizedCamera(onCapture: (byteArray: ByteArray?) -> Unit) {
+private fun BoxScope.AuthorizedCamera(
+    cameraMode: CameraMode,
+    onCapture: (byteArray: ByteArray?) -> Unit,
+) {
     val camera: AVCaptureDevice? =
         remember {
             discoverySessionWithDeviceTypes(
                 deviceTypes = deviceTypes,
                 mediaType = AVMediaTypeVideo,
-                position = AVCaptureDevicePositionFront,
+                position =
+                    when (cameraMode) {
+                        CameraMode.Front -> AVCaptureDevicePositionFront
+                        CameraMode.Back -> AVCaptureDevicePositionBack
+                    },
             ).devices.firstOrNull() as? AVCaptureDevice
         }
     if (camera != null) {
@@ -191,7 +200,11 @@ private fun BoxScope.RealDeviceCamera(
                     if (photoData != null) {
                         var uiImage = UIImage(photoData)
                         if (uiImage.imageOrientation != UIImageOrientation.UIImageOrientationUp) {
-                            UIGraphicsBeginImageContextWithOptions(uiImage.size, false, uiImage.scale)
+                            UIGraphicsBeginImageContextWithOptions(
+                                uiImage.size,
+                                false,
+                                uiImage.scale,
+                            )
                             uiImage.drawInRect(
                                 CGRectMake(
                                     x = 0.0,
