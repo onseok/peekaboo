@@ -2,6 +2,7 @@ package com.preat.peekaboo.common
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +13,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.SnackbarHost
 import androidx.compose.material.SnackbarHostState
@@ -26,13 +29,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.preat.peekaboo.camera.rememberCameraCaptureLauncher
+import com.preat.peekaboo.common.component.CircularButton
+import com.preat.peekaboo.common.component.InstagramCameraButton
+import com.preat.peekaboo.common.icon.IconCached
+import com.preat.peekaboo.common.icon.IconClose
+import com.preat.peekaboo.common.style.PeekabooTheme
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import com.preat.peekaboo.image.picker.toImageBitmap
+import com.preat.peekaboo.ui.CameraMode
+import com.preat.peekaboo.ui.PeekabooCamera
 import kotlinx.coroutines.launch
 
 @Suppress("FunctionName")
@@ -41,6 +51,7 @@ fun App() {
     val scope = rememberCoroutineScope()
     var images by remember { mutableStateOf(listOf<ImageBitmap>()) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var showCamera by remember { mutableStateOf(false) }
 
     val singleImagePicker =
         rememberImagePickerLauncher(
@@ -67,69 +78,113 @@ fun App() {
             },
         )
 
-    val cameraCaptureLauncher =
-        rememberCameraCaptureLauncher(
-            scope = scope,
-            onResult = {
-                it?.let { capturedImage ->
-                    images = listOf(capturedImage.toImageBitmap())
-                }
-            },
-            onCameraPermissionDenied = {
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message =
-                            "Camera permission has been denied.\n" +
-                                "To use the camera, please change the settings.",
-                    )
-                }
-            },
-        )
-
-    MaterialTheme {
+    PeekabooTheme {
         Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) {
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(images) { image ->
-                        Image(
-                            bitmap = image,
-                            contentDescription = "Selected Image",
+                if (showCamera) {
+                    Box {
+                        if (showCamera) {
+                            PeekabooCamera(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraMode = CameraMode.Back,
+                                captureIcon = { onClick ->
+                                    InstagramCameraButton(
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .padding(bottom = 16.dp),
+                                        onClick = onClick,
+                                    )
+                                },
+                                convertIcon = { onClick ->
+                                    CircularButton(
+                                        imageVector = IconCached,
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(bottom = 16.dp, end = 16.dp),
+                                        onClick = onClick,
+                                    )
+                                },
+                                progressIndicator = {
+                                    CircularProgressIndicator(
+                                        modifier =
+                                            Modifier
+                                                .size(80.dp)
+                                                .align(Alignment.Center),
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        strokeWidth = 8.dp,
+                                    )
+                                },
+                                onCapture = { byteArray ->
+                                    byteArray?.let {
+                                        images = listOf(it.toImageBitmap())
+                                    } ?: scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message =
+                                                "Unable to capture the image. Please try again.",
+                                        )
+                                    }
+                                    showCamera = false
+                                },
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                showCamera = false
+                            },
                             modifier =
                                 Modifier
-                                    .size(100.dp)
-                                    .clip(CircleShape),
-                            contentScale = ContentScale.Crop,
-                        )
+                                    .align(Alignment.TopStart)
+                                    .padding(top = 16.dp, start = 16.dp),
+                        ) {
+                            Icon(
+                                imageVector = IconClose,
+                                contentDescription = "Back Button",
+                                tint = Color.White,
+                            )
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                Button(
-                    onClick = {
-                        singleImagePicker.launch()
-                    },
-                ) {
-                    Text("Pick Single Image")
-                }
-                Button(
-                    onClick = {
-                        multipleImagePicker.launch()
-                    },
-                ) {
-                    Text("Pick Multiple Images")
-                }
-                Button(
-                    onClick = {
-                        cameraCaptureLauncher.launch()
-                    },
-                ) {
-                    Text("Capture Camera Image")
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(images) { image ->
+                            Image(
+                                bitmap = image,
+                                contentDescription = "Selected Image",
+                                modifier =
+                                    Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            singleImagePicker.launch()
+                        },
+                    ) {
+                        Text("Pick Single Image")
+                    }
+                    Button(
+                        onClick = {
+                            multipleImagePicker.launch()
+                        },
+                    ) {
+                        Text("Pick Multiple Images")
+                    }
+                    Button(
+                        onClick = {
+                            showCamera = true
+                        },
+                    ) {
+                        Text("Capture Image from Camera")
+                    }
                 }
             }
         }
