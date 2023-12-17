@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.SnackbarHost
 import androidx.compose.material.SnackbarHostState
@@ -25,16 +29,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.preat.peekaboo.common.component.CircularButton
+import com.preat.peekaboo.common.component.InstagramCameraButton
+import com.preat.peekaboo.common.icon.IconCached
+import com.preat.peekaboo.common.icon.IconClose
+import com.preat.peekaboo.common.style.PeekabooTheme
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import com.preat.peekaboo.image.picker.toImageBitmap
-import com.preat.peekaboo.ui.BackButton
 import com.preat.peekaboo.ui.CameraMode
 import com.preat.peekaboo.ui.PeekabooCamera
-import com.preat.peekaboo.ui.style.PeekabooTheme
 import kotlinx.coroutines.launch
 
 @Suppress("FunctionName")
@@ -83,6 +91,35 @@ fun App() {
                             PeekabooCamera(
                                 modifier = Modifier.fillMaxSize(),
                                 cameraMode = CameraMode.Back,
+                                captureIcon = { onClick ->
+                                    InstagramCameraButton(
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .padding(bottom = 16.dp),
+                                        onClick = onClick,
+                                    )
+                                },
+                                convertIcon = { onClick ->
+                                    CircularButton(
+                                        imageVector = IconCached,
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(bottom = 16.dp, end = 16.dp),
+                                        onClick = onClick,
+                                    )
+                                },
+                                progressIndicator = {
+                                    CircularProgressIndicator(
+                                        modifier =
+                                            Modifier
+                                                .size(80.dp)
+                                                .align(Alignment.Center),
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        strokeWidth = 8.dp,
+                                    )
+                                },
                                 onCapture = { byteArray ->
                                     byteArray?.let {
                                         images = listOf(it.toImageBitmap())
@@ -96,14 +133,21 @@ fun App() {
                                 },
                             )
                         }
-                        TopLayout(
-                            alignLeftContent = {
-                                BackButton {
-                                    showCamera = false
-                                }
+                        IconButton(
+                            onClick = {
+                                showCamera = false
                             },
-                            alignRightContent = {},
-                        )
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(top = 16.dp, start = 16.dp),
+                        ) {
+                            Icon(
+                                imageVector = IconClose,
+                                contentDescription = "Back Button",
+                                tint = Color.White,
+                            )
+                        }
                     }
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
