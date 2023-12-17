@@ -22,13 +22,17 @@ When using `peekaboo` on Android, ensure that Google's Jetpack Compose version i
 
 The minimum supported Android SDK is 24 (Android 7.0).
 
-In your `commonMain` configuration, add `peekaboo` as a dependency to your project. It's available on Maven Central. 
+In your `commonMain` configuration, add the desired dependency, either **`peekaboo-ui`** or **`peekaboo-image-picker`**, to your project. Both are available on Maven Central.
 <br/>
 ### Without Version Catalog
 
 ```kotlin
 commonMain {
     dependencies {
+    	// peekaboo-ui
+        implementation("io.github.team-preat:peekaboo-ui:$latest_version")
+
+        // peekaboo-image-picker
         implementation("io.github.team-preat:peekaboo-image-picker:$latest_version")
     }
 }
@@ -41,9 +45,10 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.2.1"
+peekaboo = "0.3.0"
 
 [libraries]
+peekaboo-ui = { module = "io.github.team-preat:peekaboo-ui", version.ref = "peekaboo" }
 peekaboo-image-picker = { module = "io.github.team-preat:peekaboo-image-picker", version.ref = "peekaboo" }
 ```
 
@@ -52,6 +57,10 @@ Then, in your `commonMain` configuration, reference the defined version:
 ```kotlin
 commonMain {
     dependencies {
+        // peekaboo-ui
+        implementation(libs.peekaboo.ui)
+
+        // peekaboo-image-picker
         implementation(libs.peekaboo.image.picker)
     }
 }
@@ -61,12 +70,59 @@ commonMain {
 
 | Name                    | Description                                                                 |
 |-------------------------|-----------------------------------------------------------------------------|
-| `peekaboo-image-picker` | Simplifies the process of selecting single or multiple images in `iOS` and `Android` apps. |
-| `peekaboo-camera` | 🚧 Coming soon! A convenient way to capture and select images directly from cameras on iOS and Android. 📸 |
+| `peekaboo-ui` |Provides user-friendly UI elements, including a custom camera view for easy image capture, suitable for both `iOS` and `Android` platforms. |
+| `peekaboo-image-picker` | Simplifies the process of selecting single or multiple images both in `iOS` and `Android` platforms. |
 
 <br/>
 
 ## Usage
+### Custimizable Camera UI
+`PeekabooCamera` is a `composable` function that provides a customizable camera UI within a `Compose Multiplatform` application.
+
+```kotlin
+@Composable
+fun CustomCameraView() {
+    PeekabooCamera(
+        modifier = Modifier.fillMaxSize(),
+        cameraMode = CameraMode.Back, // or CameraMode.Front
+        captureIcon = { onClick -> /* Custom Capture Button UI */ },
+        convertIcon = { onClick -> /* Custom Convert Button UI */ },
+        progressIndicator = { /* Custom Progress Indicator UI */ },
+        onCapture = { byteArray ->
+            // Handle the captured image
+        },
+        permissionDeniedContent = {
+            // Custom UI content for permission denied scenario
+        }
+    )
+}
+```
+- **`cameraMode`** : The initial camera mode (front or back). Default is `CameraMode.Back`.
+- **`captureIcon`** : A `composable` lambda for the capture button. It takes an `onClick` lambda that triggers the image capture process.
+- **`convertIcon`** : An optional `composable` lambda for a button to toggle the camera mode (front or back). It takes an `onClick` lambda for switching the camera.
+- **`progressIndicator`** : An optional `composable` lambda displayed during photo capture processing.
+- **`onCapture`** : A lambda called when a photo is captured, providing the photo as a `ByteArray` or `null` if the capture fails.
+- **`permissionDeniedContent`** : An optional `composable` lambda that provides content to be displayed when camera permission is denied. This allows users to define a custom UI to inform or guide the user when camera access has been denied. The content can be informative text, an image, a button to redirect the user to settings, or any other `composable` content. This lambda will be invoked within the `PeekabooCamera` composable scope, replacing the camera preview with the user-defined UI.
+
+
+> 💡 **Note**: It's recommended to handle camera permission checks before rendering `PeekabooCamera`. This preemptive check ensures the camera UI is displayed only when permissions are granted, avoiding empty views or unexpected user experiences.
+
+#### Capturing an Image from Camera
+| Android                                                         | iOS                                                     |
+|-----------------------------------------------------------------|---------------------------------------------------------|
+| <img src="https://github.com/onseok/onseok/assets/76798309/897a0104-2e8d-4339-90fb-2f61807aa56d" width="300" height="700"> | <img src="https://github.com/onseok/onseok/assets/76798309/fe414cc2-370a-4b0d-9558-c60e1fbbb4f7" width="300" height="700"> |
+
+#### Toggling Camera Mode Between Front and Back
+| Android                                                         | iOS                                                     |
+|-----------------------------------------------------------------|---------------------------------------------------------|
+| <img src="https://github.com/onseok/onseok/assets/76798309/477f49f8-389d-4ba6-a2d1-60155cab355e" width="300" height="700"> | <img src="https://github.com/onseok/onseok/assets/76798309/022da284-cf58-4ce0-9fc1-e592885f09b9" width="300" height="700"> |
+
+#### Handling Denied Camera Permissions
+| Android                                                         | iOS                                                     |
+|-----------------------------------------------------------------|---------------------------------------------------------|
+| <img src="https://github.com/onseok/onseok/assets/76798309/61511ec6-45b9-48bd-9267-fe9f2a086008" width="300" height="700"> | <img src="https://github.com/onseok/onseok/assets/76798309/604ed9d9-d6e0-47ac-9393-5cb627a4f13d" width="300" height="700"> |
+
+
 ### Select Single Image
 
 ```kotlin
