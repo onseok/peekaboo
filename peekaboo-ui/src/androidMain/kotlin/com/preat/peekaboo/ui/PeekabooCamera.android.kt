@@ -27,6 +27,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
@@ -45,11 +46,10 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    permissionDeniedContent: @Composable () -> Unit,
 ) {
     val cameraPermissionState =
-        rememberPermissionState(
-            android.Manifest.permission.CAMERA,
-        )
+        rememberPermissionState(permission = android.Manifest.permission.CAMERA)
     when (cameraPermissionState.status) {
         PermissionStatus.Granted -> {
             CameraWithGrantedPermission(
@@ -62,8 +62,14 @@ actual fun PeekabooCamera(
             )
         }
         is PermissionStatus.Denied -> {
-            LaunchedEffect(Unit) {
-                cameraPermissionState.launchPermissionRequest()
+            if (cameraPermissionState.status.shouldShowRationale) {
+                LaunchedEffect(Unit) {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            } else {
+                Box(modifier = modifier) {
+                    permissionDeniedContent()
+                }
             }
         }
     }
