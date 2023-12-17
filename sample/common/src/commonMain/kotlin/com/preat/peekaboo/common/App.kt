@@ -183,7 +183,7 @@ fun App() {
                             showCamera = true
                         },
                     ) {
-                        Text("Capture Camera Image")
+                        Text("Capture Image from Camera")
                     }
                 }
             }
