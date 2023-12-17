@@ -4,6 +4,7 @@
     package="com.preat.peekaboo.android">
 
     <application
+        android:label="peekaboo"
         android:allowBackup="false"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">

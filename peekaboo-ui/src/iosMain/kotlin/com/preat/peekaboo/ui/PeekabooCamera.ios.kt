@@ -96,6 +96,7 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    permissionDeniedContent: @Composable () -> Unit,
 ) {
     var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
     LaunchedEffect(Unit) {
@@ -130,7 +131,9 @@ actual fun PeekabooCamera(
             }
 
             CameraAccess.Denied -> {
-                Text("Camera access denied", color = Color.White)
+                Box(modifier = modifier) {
+                    permissionDeniedContent()
+                }
             }
 
             CameraAccess.Authorized -> {

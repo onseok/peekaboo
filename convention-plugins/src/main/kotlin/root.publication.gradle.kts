@@ -4,7 +4,7 @@ plugins {
 
 allprojects {
     group = "io.github.team-preat"
-    version = "0.2.1"
+    version = "0.3.0"
 }
 
 nexusPublishing {
