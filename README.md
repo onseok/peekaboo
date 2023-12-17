@@ -76,6 +76,15 @@ commonMain {
 <br/>
 
 ## Usage
+### Xcode setup
+In order to access the camera on iOS devices, it's essential to include a specific key-value pair in the `Info.plist` file of your iOS project. This key-value pair comprises a key that identifies the type of permission being requested and a value that provides a user-friendly description explaining why the app needs access to the camera.
+
+Here's the key-value pair you should add to your `Info.plist`:
+```
+<key>Privacy - Camera Usage Description</key>
+<string>This app uses camera for capturing photos.</string>
+```
+
 ### Custimizable Camera UI
 `PeekabooCamera` is a `composable` function that provides a customizable camera UI within a `Compose Multiplatform` application.
 
