@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,9 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.interop.UIKitView
-import androidx.compose.ui.unit.dp
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -43,6 +38,7 @@ import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDualWideCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDuoCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInUltraWideCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
+import platform.AVFoundation.AVCaptureInput
 import platform.AVFoundation.AVCapturePhoto
 import platform.AVFoundation.AVCapturePhotoCaptureDelegateProtocol
 import platform.AVFoundation.AVCapturePhotoOutput
@@ -63,8 +59,6 @@ import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGSize
-import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
@@ -98,7 +92,9 @@ private val deviceTypes =
 actual fun PeekabooCamera(
     modifier: Modifier,
     cameraMode: CameraMode,
-    captureIcon: ImageVector,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
@@ -138,7 +134,13 @@ actual fun PeekabooCamera(
             }
 
             CameraAccess.Authorized -> {
-                AuthorizedCamera(cameraMode, captureIcon, onCapture)
+                AuthorizedCamera(
+                    cameraMode = cameraMode,
+                    captureIcon = captureIcon,
+                    convertIcon = convertIcon,
+                    progressIndicator = progressIndicator,
+                    onCapture = onCapture,
+                )
             }
         }
     }
@@ -148,7 +150,9 @@ actual fun PeekabooCamera(
 @Composable
 private fun BoxScope.AuthorizedCamera(
     cameraMode: CameraMode,
-    captureIcon: ImageVector,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val camera: AVCaptureDevice? =
@@ -164,7 +168,13 @@ private fun BoxScope.AuthorizedCamera(
             ).devices.firstOrNull() as? AVCaptureDevice
         }
     if (camera != null) {
-        RealDeviceCamera(camera, captureIcon, onCapture)
+        RealDeviceCamera(
+            camera = camera,
+            captureIcon = captureIcon,
+            convertIcon = convertIcon,
+            progressIndicator = progressIndicator,
+            onCapture = onCapture,
+        )
     } else {
         Text(
             """
@@ -181,9 +191,12 @@ private fun BoxScope.AuthorizedCamera(
 @Composable
 private fun BoxScope.RealDeviceCamera(
     camera: AVCaptureDevice,
-    captureIcon: ImageVector,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
+    var isFrontCamera by remember { mutableStateOf(camera.position == AVCaptureDevicePositionFront) }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
     var actualOrientation by remember {
         mutableStateOf(
@@ -226,59 +239,30 @@ private fun BoxScope.RealDeviceCamera(
                     }
                     capturePhotoStarted = false
                 }
-
-                @OptIn(ExperimentalForeignApi::class)
-                private fun UIImage.fitInto(px: Int): UIImage {
-                    val targetScale =
-                        maxOf(
-                            px.toFloat() / size.useContents { width },
-                            px.toFloat() / size.useContents { height },
-                        )
-                    val newSize =
-                        size.useContents { CGSizeMake(width * targetScale, height * targetScale) }
-                    return resize(newSize)
-                }
-
-                @OptIn(ExperimentalForeignApi::class)
-                private fun UIImage.resize(targetSize: CValue<CGSize>): UIImage {
-                    val currentSize = this.size
-                    val widthRatio =
-                        targetSize.useContents { width } / currentSize.useContents { width }
-                    val heightRatio =
-                        targetSize.useContents { height } / currentSize.useContents { height }
-
-                    val newSize: CValue<CGSize> =
-                        if (widthRatio > heightRatio) {
-                            CGSizeMake(
-                                width = currentSize.useContents { width } * heightRatio,
-                                height = currentSize.useContents { height } * heightRatio,
-                            )
-                        } else {
-                            CGSizeMake(
-                                width = currentSize.useContents { width } * widthRatio,
-                                height = currentSize.useContents { height } * widthRatio,
-                            )
-                        }
-                    val newRect =
-                        CGRectMake(
-                            x = 0.0,
-                            y = 0.0,
-                            width = newSize.useContents { width },
-                            height = newSize.useContents { height },
-                        )
-                    UIGraphicsBeginImageContextWithOptions(
-                        size = newSize,
-                        opaque = false,
-                        scale = 1.0,
-                    )
-                    this.drawInRect(newRect)
-                    val newImage = UIGraphicsGetImageFromCurrentImageContext()
-                    UIGraphicsEndImageContext()
-
-                    return newImage!!
-                }
             }
         }
+
+    val triggerCapture: () -> Unit = {
+        capturePhotoStarted = true
+        val photoSettings =
+            AVCapturePhotoSettings.photoSettingsWithFormat(
+                format = mapOf(pair = AVVideoCodecKey to AVVideoCodecTypeJPEG),
+            )
+        if (camera.position == AVCaptureDevicePositionFront) {
+            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+                ?.automaticallyAdjustsVideoMirroring = false
+            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+                ?.videoMirrored = true
+        }
+        capturePhotoOutput.capturePhotoWithSettings(
+            settings = photoSettings,
+            delegate = photoCaptureDelegate,
+        )
+    }
+
+    val switchCamera: () -> Unit = {
+        isFrontCamera = !isFrontCamera
+    }
 
     val captureSession: AVCaptureSession =
         remember {
@@ -290,10 +274,35 @@ private fun BoxScope.RealDeviceCamera(
                 captureSession.addOutput(capturePhotoOutput)
             }
         }
+
     val cameraPreviewLayer =
         remember {
             AVCaptureVideoPreviewLayer(session = captureSession)
         }
+
+    // Update captureSession with new camera configuration whenever isFrontCamera changed.
+    LaunchedEffect(isFrontCamera) {
+        captureSession.beginConfiguration()
+        captureSession.inputs.forEach { captureSession.removeInput(it as AVCaptureInput) }
+
+        val newCamera =
+            discoverySessionWithDeviceTypes(
+                deviceTypes,
+                AVMediaTypeVideo,
+                if (isFrontCamera) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack,
+            ).devices.firstOrNull() as? AVCaptureDevice
+
+        newCamera?.let {
+            val newInput =
+                AVCaptureDeviceInput.deviceInputWithDevice(it, error = null) as AVCaptureDeviceInput
+            if (captureSession.canAddInput(newInput)) {
+                captureSession.addInput(newInput)
+            }
+        }
+
+        captureSession.commitConfiguration()
+        captureSession.startRunning()
+    }
 
     DisposableEffect(Unit) {
         class OrientationListener : NSObject() {
@@ -344,6 +353,7 @@ private fun BoxScope.RealDeviceCamera(
             )
         }
     }
+
     UIKitView(
         modifier = Modifier.fillMaxSize(),
         background = Color.Black,
@@ -362,39 +372,11 @@ private fun BoxScope.RealDeviceCamera(
             CATransaction.commit()
         },
     )
-    CircularButton(
-        imageVector = captureIcon,
-        modifier =
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(36.dp),
-        enabled = !capturePhotoStarted,
-    ) {
-        capturePhotoStarted = true
-        val photoSettings =
-            AVCapturePhotoSettings.photoSettingsWithFormat(
-                format = mapOf(pair = AVVideoCodecKey to AVVideoCodecTypeJPEG),
-            )
-        if (camera.position == AVCaptureDevicePositionFront) {
-            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
-                ?.automaticallyAdjustsVideoMirroring = false
-            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
-                ?.videoMirrored = true
-        }
-        capturePhotoOutput.capturePhotoWithSettings(
-            settings = photoSettings,
-            delegate = photoCaptureDelegate,
-        )
-    }
+    // Call the triggerCapture lambda when the capture button is clicked
+    captureIcon(triggerCapture)
+    convertIcon(switchCamera)
     if (capturePhotoStarted) {
-        CircularProgressIndicator(
-            modifier =
-                Modifier
-                    .size(80.dp)
-                    .align(Alignment.Center),
-            color = Color.White.copy(alpha = 0.7f),
-            strokeWidth = 8.dp,
-        )
+        progressIndicator()
     }
 }
 

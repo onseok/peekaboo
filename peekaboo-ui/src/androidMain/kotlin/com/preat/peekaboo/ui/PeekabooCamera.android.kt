@@ -10,12 +10,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -24,14 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
@@ -41,7 +32,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import kotlin.math.absoluteValue
 
 private val executor = Executors.newSingleThreadExecutor()
 
@@ -51,7 +41,9 @@ private val executor = Executors.newSingleThreadExecutor()
 actual fun PeekabooCamera(
     modifier: Modifier,
     cameraMode: CameraMode,
-    captureIcon: ImageVector,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
     val cameraPermissionState =
@@ -60,7 +52,14 @@ actual fun PeekabooCamera(
         )
     when (cameraPermissionState.status) {
         PermissionStatus.Granted -> {
-            CameraWithGrantedPermission(modifier, cameraMode, captureIcon, onCapture)
+            CameraWithGrantedPermission(
+                modifier = modifier,
+                cameraMode = cameraMode,
+                captureIcon = captureIcon,
+                convertIcon = convertIcon,
+                progressIndicator = progressIndicator,
+                onCapture = onCapture,
+            )
         }
         is PermissionStatus.Denied -> {
             LaunchedEffect(Unit) {
@@ -75,7 +74,9 @@ actual fun PeekabooCamera(
 private fun CameraWithGrantedPermission(
     modifier: Modifier,
     cameraMode: CameraMode,
-    captureIcon: ImageVector,
+    captureIcon: @Composable (() -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray) -> Unit,
 ) {
     val context = LocalContext.current
@@ -136,56 +137,46 @@ private fun CameraWithGrantedPermission(
 
     var capturePhotoStarted by remember { mutableStateOf(false) }
 
-    Box(
-        modifier =
-            modifier
-                .pointerInput(isFrontCamera) {
-                    detectHorizontalDragGestures { _, dragAmount ->
-                        if (dragAmount.absoluteValue > 50.0) {
-                            isFrontCamera = !isFrontCamera
+    val triggerCapture: () -> Unit = {
+        capturePhotoStarted = true
+        imageCapture.takePicture(
+            executor,
+            object : OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    val rotationDegrees = image.imageInfo.rotationDegrees
+                    val buffer = image.planes[0].buffer
+                    val data = buffer.toByteArray()
+
+                    // Rotate the image if necessary
+                    val rotatedData =
+                        if (rotationDegrees != 0) {
+                            rotateImage(data, rotationDegrees)
+                        } else {
+                            data
                         }
-                    }
-                },
-    ) {
+
+                    image.close()
+                    onCapture(rotatedData)
+                    capturePhotoStarted = false
+                }
+            },
+        )
+    }
+
+    val toggleCamera: () -> Unit = {
+        isFrontCamera = !isFrontCamera
+    }
+
+    Box(modifier = modifier) {
         AndroidView(
             factory = { previewView },
             modifier = Modifier.fillMaxSize(),
         )
-        CircularButton(
-            imageVector = captureIcon,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(36.dp),
-            enabled = !capturePhotoStarted,
-        ) {
-            capturePhotoStarted = true
-            imageCapture.takePicture(
-                executor,
-                object : OnImageCapturedCallback() {
-                    override fun onCaptureSuccess(image: ImageProxy) {
-                        val rotationDegrees = image.imageInfo.rotationDegrees
-                        val buffer = image.planes[0].buffer
-                        val data = buffer.toByteArray()
-
-                        // Rotate the image if necessary
-                        val rotatedData =
-                            if (rotationDegrees != 0) {
-                                rotateImage(data, rotationDegrees)
-                            } else {
-                                data
-                            }
-
-                        image.close()
-                        onCapture(rotatedData)
-                        capturePhotoStarted = false
-                    }
-                },
-            )
-        }
+        // Call the triggerCapture lambda when the capture button is clicked
+        captureIcon(triggerCapture)
+        convertIcon(toggleCamera)
         if (capturePhotoStarted) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(80.dp).align(Alignment.Center),
-                color = Color.White.copy(alpha = 0.7f),
-                strokeWidth = 8.dp,
-            )
+            progressIndicator()
         }
     }
 }
