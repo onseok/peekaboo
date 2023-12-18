@@ -30,4 +30,4 @@ jobs:
       - name: Run xcodebuild
         run: |
           cd sample/ios
-          xcodebuild -scheme peekaboo -sdk iphoneSimulator
+          xcodebuild -scheme peekaboo -sdk iphonesimulator
