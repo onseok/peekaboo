@@ -17,11 +17,6 @@ jobs:
           distribution: zulu
           cache: gradle
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@250fcd6a742febb1123a77a841497ccaa8b9e939 # v1.152.0
-        with:
-          bundler-cache: true
-
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: 'latest-stable'
