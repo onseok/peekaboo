@@ -7,6 +7,7 @@
 [![Build](https://github.com/team-preat/peekaboo/actions/workflows/ci_check.yml/badge.svg)](https://github.com/team-preat/peekaboo/actions/workflows/ci_check.yml)
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
+[![Featured in androidweekly.net](https://img.shields.io/badge/Featured%20in%20androidweekly.net-Issue%20%23601-4998C2)](https://androidweekly.net/issues/issue-601)
 
 📂 Kotlin Multiplatform library for Compose Multiplatform, designed for seamless integration of an image picker feature in iOS and Android applications.
 
