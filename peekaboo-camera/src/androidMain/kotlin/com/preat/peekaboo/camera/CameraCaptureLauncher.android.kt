@@ -88,7 +88,7 @@ actual class CameraCaptureLauncher actual constructor(
     }
 }
 
-fun Context.createImageFile(): File {
+private fun Context.createImageFile(): File {
     // Generate a file name using the current time
     val timeStamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(Date())
     // Add a unique identifier to prevent file name duplication

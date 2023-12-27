@@ -78,7 +78,7 @@ actual fun rememberCameraCaptureLauncher(
     }
 }
 
-class StrongReferenceDelegate(
+private class StrongReferenceDelegate(
     private val onResult: (ByteArray?) -> Unit,
 ) : NSObject(), UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
     override fun imagePickerController(
@@ -138,7 +138,7 @@ private sealed interface CameraAccess {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-inline fun NSData.toByteArray(): ByteArray {
+private inline fun NSData.toByteArray(): ByteArray {
     val size = length.toInt()
     val byteArray = ByteArray(size)
     if (size > 0) {

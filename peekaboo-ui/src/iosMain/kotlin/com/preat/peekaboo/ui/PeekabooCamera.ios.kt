@@ -399,7 +399,7 @@ private fun BoxScope.RealDeviceCamera(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-inline fun NSData.toByteArray(): ByteArray {
+private inline fun NSData.toByteArray(): ByteArray {
     val size = length.toInt()
     val byteArray = ByteArray(size)
     if (size > 0) {
