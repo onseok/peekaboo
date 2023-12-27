@@ -5,7 +5,7 @@
     <application>
         <provider
             android:name="com.preat.peekaboo.ui.ImageViewerFileProvider"
-            android:authorities="com.preat.peekaboo.fileprovider"
+            android:authorities="${applicationId}.provider"
             android:exported="false"
             android:grantUriPermissions="true" />
     </application>
