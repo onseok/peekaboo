@@ -15,6 +15,10 @@
  */
 package com.preat.peekaboo.image.picker
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,23 +27,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.preat.peekaboo.image.picker.SelectionMode.Companion.INFINITY
 import kotlinx.coroutines.CoroutineScope
+import java.io.ByteArrayOutputStream
 
 @Composable
 actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
     scope: CoroutineScope?,
+    resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     return when (selectionMode) {
         SelectionMode.Single ->
             pickSingleImage(
                 selectionMode = selectionMode,
+                resizeOptions = resizeOptions,
                 onResult = onResult,
             )
 
         is SelectionMode.Multiple ->
             pickMultipleImages(
                 selectionMode = selectionMode,
+                resizeOptions = resizeOptions,
                 onResult = onResult,
             )
     }
@@ -48,6 +56,7 @@ actual fun rememberImagePickerLauncher(
 @Composable
 private fun pickSingleImage(
     selectionMode: SelectionMode,
+    resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
@@ -57,10 +66,15 @@ private fun pickSingleImage(
             contract = ActivityResultContracts.PickVisualMedia(),
             onResult = { uri ->
                 uri?.let {
-                    with(context.contentResolver) {
-                        openInputStream(uri)?.use {
-                            onResult(listOf(it.readBytes()))
-                        }
+                    val resizedImage =
+                        resizeImage(
+                            context = context,
+                            uri = uri,
+                            width = resizeOptions.width,
+                            height = resizeOptions.height,
+                        )
+                    if (resizedImage != null) {
+                        onResult(listOf(resizedImage))
                     }
                 }
             },
@@ -81,6 +95,7 @@ private fun pickSingleImage(
 @Composable
 fun pickMultipleImages(
     selectionMode: SelectionMode.Multiple,
+    resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
@@ -97,9 +112,12 @@ fun pickMultipleImages(
             onResult = { uriList ->
                 val imageBytesList =
                     uriList.mapNotNull { uri ->
-                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                            inputStream.readBytes()
-                        }
+                        resizeImage(
+                            context = context,
+                            uri = uri,
+                            width = resizeOptions.width,
+                            height = resizeOptions.height,
+                        )
                     }
                 if (imageBytesList.isNotEmpty()) {
                     onResult(imageBytesList)
@@ -126,4 +144,38 @@ actual class ImagePickerLauncher actual constructor(
     actual fun launch() {
         onLaunch()
     }
+}
+
+fun resizeImage(
+    context: Context,
+    uri: Uri,
+    width: Int,
+    height: Int,
+): ByteArray? {
+    context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        val options =
+            BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+        BitmapFactory.decodeStream(inputStream, null, options)
+
+        var inSampleSize = 1
+        while (options.outWidth / inSampleSize > width || options.outHeight / inSampleSize > height) {
+            inSampleSize *= 2
+        }
+
+        options.inJustDecodeBounds = false
+        options.inSampleSize = inSampleSize
+
+        context.contentResolver.openInputStream(uri)?.use { scaledInputStream ->
+            val scaledBitmap = BitmapFactory.decodeStream(scaledInputStream, null, options)
+            if (scaledBitmap != null) {
+                ByteArrayOutputStream().use { byteArrayOutputStream ->
+                    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+                    return byteArrayOutputStream.toByteArray()
+                }
+            }
+        }
+    }
+    return null
 }

@@ -47,7 +47,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.3.0"
+peekaboo = "0.3.1"
 
 [libraries]
 peekaboo-ui = { module = "io.github.team-preat:peekaboo-ui", version.ref = "peekaboo" }
@@ -200,6 +200,54 @@ Button(
 | Android                                                         | iOS                                                     |
 |-----------------------------------------------------------------|---------------------------------------------------------|
 | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/e26ae1b3-4333-41a9-92c3-ebe56c337d79" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/a990ce09-d485-4a0f-9416-8af8b040cf2d" width="300" height="700"> |
+
+<br/>
+
+## Image Resizing Options
+`peekaboo` offers customizable resizing options for both single and multiple image selections. <br/>
+This feature allows you to resize the selected images to specific dimensions, optimizing them for your application's requirements and enhancing performance.
+
+- The default resizing dimensions are set to `800 x 800` pixels.
+- You can customize the resizing dimensions according to your needs.
+
+### Usage
+Set the `resizeOptions` parameter in `rememberImagePickerLauncher` with your desired dimensions:
+
+```kotlin
+val resizeOptions = ResizeOptions(width = 1200, height = 1200) // Custom dimensions
+```
+
+#### Single Image Selection with Resizing
+```kotlin
+val singleImagePicker = rememberImagePickerLauncher(
+    selectionMode = SelectionMode.Single,
+    scope = rememberCoroutineScope(),
+    resizeOptions = resizeOptions,
+    onResult = { byteArrays ->
+        byteArrays.firstOrNull()?.let {
+            // Process the resized image's ByteArray
+            println(it)
+        }
+    }
+)
+```
+
+#### Multiple Images Selection with Resizing
+```kotlin
+val multipleImagePicker = rememberImagePickerLauncher(
+    selectionMode = SelectionMode.Multiple(maxSelection = 5),
+    scope = rememberCoroutineScope(),
+    resizeOptions = resizeOptions,
+    onResult = { byteArrays ->
+        byteArrays.forEach {
+            // Process the resized images' ByteArrays
+            println(it)
+        }
+    }
+)
+```
+
+>💡 Note: While resizing, the aspect ratio of the original images is preserved. The final dimensions may slightly vary to maintain the original proportions.
 
 <br/>
 

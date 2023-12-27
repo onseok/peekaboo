@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 expect fun rememberImagePickerLauncher(
     selectionMode: SelectionMode = SelectionMode.Single,
     scope: CoroutineScope?,
+    resizeOptions: ResizeOptions = ResizeOptions(),
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher
 
@@ -34,6 +35,11 @@ sealed class SelectionMode {
         const val INFINITY = 0
     }
 }
+
+data class ResizeOptions(
+    val width: Int = 800,
+    val height: Int = 800,
+)
 
 expect class ImagePickerLauncher(
     selectionMode: SelectionMode,

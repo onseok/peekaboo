@@ -17,11 +17,16 @@ package com.preat.peekaboo.image.picker
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.refTo
+import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGSize
+import platform.CoreGraphics.CGSizeMake
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerConfigurationSelectionOrdered
 import platform.PhotosUI.PHPickerFilter
@@ -29,6 +34,11 @@ import platform.PhotosUI.PHPickerResult
 import platform.PhotosUI.PHPickerViewController
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIApplication
+import platform.UIKit.UIGraphicsBeginImageContextWithOptions
+import platform.UIKit.UIGraphicsEndImageContext
+import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
+import platform.UIKit.UIImage
+import platform.UIKit.UIImageJPEGRepresentation
 import platform.darwin.NSObject
 import platform.darwin.dispatch_group_create
 import platform.darwin.dispatch_group_enter
@@ -40,9 +50,9 @@ import platform.posix.memcpy
 actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
     scope: CoroutineScope?,
+    resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
-    @OptIn(ExperimentalForeignApi::class)
     val delegate =
         object : NSObject(), PHPickerViewControllerDelegateProtocol {
             override fun picker(
@@ -63,11 +73,14 @@ actual fun rememberImagePickerLauncher(
                     ) { nsData, _ ->
                         scope?.launch(Dispatchers.Main) {
                             nsData?.let {
-                                val bytes = ByteArray(it.length.toInt())
-                                memcpy(bytes.refTo(0), it.bytes, it.length)
-                                imageData.add(bytes)
+                                val image = UIImage.imageWithData(it)
+                                val resizedImage = image?.fitInto(resizeOptions.width, resizeOptions.height)
+                                val bytes = resizedImage?.toByteArray()
+                                if (bytes != null) {
+                                    imageData.add(bytes)
+                                }
+                                dispatch_group_leave(dispatchGroup)
                             }
-                            dispatch_group_leave(dispatchGroup)
                         }
                     }
                 }
@@ -93,6 +106,33 @@ actual fun rememberImagePickerLauncher(
             },
         )
     }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun UIImage.toByteArray(): ByteArray {
+    val jpegData = UIImageJPEGRepresentation(this, 1.0)!!
+    return ByteArray(jpegData.length.toInt()).apply {
+        memcpy(this.refTo(0), jpegData.bytes, jpegData.length)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun UIImage.fitInto(
+    width: Int,
+    height: Int,
+): UIImage {
+    val targetSize = CGSizeMake(width.toDouble(), height.toDouble())
+    return this.resize(targetSize)
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun UIImage.resize(targetSize: CValue<CGSize>): UIImage {
+    UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
+    this.drawInRect(CGRectMake(0.0, 0.0, targetSize.useContents { width }, targetSize.useContents { height }))
+    val newImage = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+
+    return newImage!!
 }
 
 private fun createPHPickerViewController(
