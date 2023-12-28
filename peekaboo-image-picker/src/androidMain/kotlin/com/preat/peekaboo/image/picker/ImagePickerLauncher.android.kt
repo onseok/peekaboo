@@ -93,7 +93,7 @@ private fun pickSingleImage(
 }
 
 @Composable
-fun pickMultipleImages(
+private fun pickMultipleImages(
     selectionMode: SelectionMode.Multiple,
     resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
@@ -146,7 +146,7 @@ actual class ImagePickerLauncher actual constructor(
     }
 }
 
-fun resizeImage(
+private fun resizeImage(
     context: Context,
     uri: Uri,
     width: Int,

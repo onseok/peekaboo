@@ -15,4 +15,4 @@
  */
 package com.preat.peekaboo.camera
 
-expect fun createUUID(): String
+internal expect fun createUUID(): String
