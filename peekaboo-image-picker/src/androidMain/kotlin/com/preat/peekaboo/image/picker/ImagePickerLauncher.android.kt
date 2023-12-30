@@ -32,7 +32,7 @@ import java.io.ByteArrayOutputStream
 @Composable
 actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
-    scope: CoroutineScope?,
+    scope: CoroutineScope,
     resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
@@ -60,7 +60,7 @@ private fun pickSingleImage(
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
-
+    var imagePickerLauncher: ImagePickerLauncher? = null
     val singleImagePickerLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
@@ -77,19 +77,21 @@ private fun pickSingleImage(
                         onResult(listOf(resizedImage))
                     }
                 }
+                imagePickerLauncher?.markPhotoPickerInactive()
             },
         )
 
-    return remember {
-        ImagePickerLauncher(
-            selectionMode = selectionMode,
-            onLaunch = {
-                singleImagePickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                )
-            },
-        )
-    }
+    imagePickerLauncher =
+        remember {
+            ImagePickerLauncher(
+                selectionMode = selectionMode,
+                onLaunch = {
+                    singleImagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+            )
+        }
+
+    return imagePickerLauncher
 }
 
 @Composable
@@ -99,6 +101,7 @@ private fun pickMultipleImages(
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
+    var imagePickerLauncher: ImagePickerLauncher? = null
     val maxSelection =
         if (selectionMode.maxSelection == INFINITY) {
             getMaxItems()
@@ -122,26 +125,37 @@ private fun pickMultipleImages(
                 if (imageBytesList.isNotEmpty()) {
                     onResult(imageBytesList)
                 }
+                imagePickerLauncher?.markPhotoPickerInactive()
             },
         )
 
-    return remember {
-        ImagePickerLauncher(
-            selectionMode = selectionMode,
-            onLaunch = {
-                multipleImagePickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                )
-            },
-        )
-    }
+    imagePickerLauncher =
+        remember {
+            ImagePickerLauncher(
+                selectionMode = selectionMode,
+                onLaunch = {
+                    multipleImagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+            )
+        }
+
+    return imagePickerLauncher
 }
 
 actual class ImagePickerLauncher actual constructor(
     selectionMode: SelectionMode,
     private val onLaunch: () -> Unit,
 ) {
+    private var isPhotoPickerActive = false
+
+    fun markPhotoPickerInactive() {
+        isPhotoPickerActive = false
+    }
+
     actual fun launch() {
+        if (isPhotoPickerActive) return
+
+        isPhotoPickerActive = true
         onLaunch()
     }
 }
