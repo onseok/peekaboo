@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.preat.peekaboo.image.picker.PeekabooBitmapCache.bitmapToByteArray
 import com.preat.peekaboo.image.picker.SelectionMode.Companion.INFINITY
 import kotlinx.coroutines.CoroutineScope
 import java.io.ByteArrayOutputStream
@@ -166,11 +167,13 @@ private fun resizeImage(
     width: Int,
     height: Int,
 ): ByteArray? {
+    val cacheKey = "${uri}_w${width}_h$height"
+    PeekabooBitmapCache.instance.get(cacheKey)?.let { cachedBitmap ->
+        return bitmapToByteArray(cachedBitmap)
+    }
+
     context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        val options =
-            BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeStream(inputStream, null, options)
 
         var inSampleSize = 1
@@ -182,11 +185,12 @@ private fun resizeImage(
         options.inSampleSize = inSampleSize
 
         context.contentResolver.openInputStream(uri)?.use { scaledInputStream ->
-            val scaledBitmap = BitmapFactory.decodeStream(scaledInputStream, null, options)
-            if (scaledBitmap != null) {
+            BitmapFactory.decodeStream(scaledInputStream, null, options)?.let { scaledBitmap ->
                 ByteArrayOutputStream().use { byteArrayOutputStream ->
                     scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                    return byteArrayOutputStream.toByteArray()
+                    val byteArray = byteArrayOutputStream.toByteArray()
+                    PeekabooBitmapCache.instance.put(cacheKey, scaledBitmap)
+                    return byteArray
                 }
             }
         }
