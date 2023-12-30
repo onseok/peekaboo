@@ -49,7 +49,7 @@ import platform.posix.memcpy
 @Composable
 actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
-    scope: CoroutineScope?,
+    scope: CoroutineScope,
     resizeOptions: ResizeOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
@@ -71,7 +71,7 @@ actual fun rememberImagePickerLauncher(
                     result.itemProvider.loadDataRepresentationForTypeIdentifier(
                         typeIdentifier = "public.image",
                     ) { nsData, _ ->
-                        scope?.launch(Dispatchers.Main) {
+                        scope.launch(Dispatchers.Main) {
                             nsData?.let {
                                 val image = UIImage.imageWithData(it)
                                 val resizedImage = image?.fitInto(resizeOptions.width, resizeOptions.height)
@@ -86,7 +86,7 @@ actual fun rememberImagePickerLauncher(
                 }
 
                 dispatch_group_notify(dispatchGroup, platform.darwin.dispatch_get_main_queue()) {
-                    scope?.launch(Dispatchers.Main) {
+                    scope.launch(Dispatchers.Main) {
                         onResult(imageData)
                     }
                 }
