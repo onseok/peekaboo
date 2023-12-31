@@ -18,6 +18,10 @@ package com.preat.peekaboo.image.picker
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -35,6 +39,7 @@ actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
     scope: CoroutineScope,
     resizeOptions: ResizeOptions,
+    filterOptions: FilterOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     return when (selectionMode) {
@@ -42,6 +47,7 @@ actual fun rememberImagePickerLauncher(
             pickSingleImage(
                 selectionMode = selectionMode,
                 resizeOptions = resizeOptions,
+                filterOptions = filterOptions,
                 onResult = onResult,
             )
 
@@ -49,6 +55,7 @@ actual fun rememberImagePickerLauncher(
             pickMultipleImages(
                 selectionMode = selectionMode,
                 resizeOptions = resizeOptions,
+                filterOptions = filterOptions,
                 onResult = onResult,
             )
     }
@@ -58,6 +65,7 @@ actual fun rememberImagePickerLauncher(
 private fun pickSingleImage(
     selectionMode: SelectionMode,
     resizeOptions: ResizeOptions,
+    filterOptions: FilterOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
@@ -73,6 +81,7 @@ private fun pickSingleImage(
                             uri = uri,
                             width = resizeOptions.width,
                             height = resizeOptions.height,
+                            filterOptions = filterOptions,
                         )
                     if (resizedImage != null) {
                         onResult(listOf(resizedImage))
@@ -99,6 +108,7 @@ private fun pickSingleImage(
 private fun pickMultipleImages(
     selectionMode: SelectionMode.Multiple,
     resizeOptions: ResizeOptions,
+    filterOptions: FilterOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val context = LocalContext.current
@@ -121,6 +131,7 @@ private fun pickMultipleImages(
                             uri = uri,
                             width = resizeOptions.width,
                             height = resizeOptions.height,
+                            filterOptions = filterOptions,
                         )
                     }
                 if (imageBytesList.isNotEmpty()) {
@@ -166,34 +177,85 @@ private fun resizeImage(
     uri: Uri,
     width: Int,
     height: Int,
+    filterOptions: FilterOptions,
 ): ByteArray? {
-    val cacheKey = "${uri}_w${width}_h$height"
-    PeekabooBitmapCache.instance.get(cacheKey)?.let { cachedBitmap ->
+    val resizeCacheKey = "${uri}_w${width}_h$height"
+    val filterCacheKey = "${resizeCacheKey}_$filterOptions"
+
+    PeekabooBitmapCache.instance.get(filterCacheKey)?.let { cachedBitmap ->
         return bitmapToByteArray(cachedBitmap)
     }
 
-    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeStream(inputStream, null, options)
+    val resizedBitmap =
+        PeekabooBitmapCache.instance.get(resizeCacheKey) ?: run {
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(inputStream, null, options)
 
-        var inSampleSize = 1
-        while (options.outWidth / inSampleSize > width || options.outHeight / inSampleSize > height) {
-            inSampleSize *= 2
-        }
+                var inSampleSize = 1
+                while (options.outWidth / inSampleSize > width || options.outHeight / inSampleSize > height) {
+                    inSampleSize *= 2
+                }
 
-        options.inJustDecodeBounds = false
-        options.inSampleSize = inSampleSize
+                options.inJustDecodeBounds = false
+                options.inSampleSize = inSampleSize
 
-        context.contentResolver.openInputStream(uri)?.use { scaledInputStream ->
-            BitmapFactory.decodeStream(scaledInputStream, null, options)?.let { scaledBitmap ->
-                ByteArrayOutputStream().use { byteArrayOutputStream ->
-                    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                    val byteArray = byteArrayOutputStream.toByteArray()
-                    PeekabooBitmapCache.instance.put(cacheKey, scaledBitmap)
-                    return byteArray
+                context.contentResolver.openInputStream(uri)?.use { scaledInputStream ->
+                    BitmapFactory.decodeStream(scaledInputStream, null, options)?.also { bitmap ->
+                        PeekabooBitmapCache.instance.put(resizeCacheKey, bitmap)
+                    }
                 }
             }
         }
+
+    resizedBitmap?.let {
+        val filteredBitmap = applyFilter(it, filterOptions)
+        ByteArrayOutputStream().use { byteArrayOutputStream ->
+            filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+            PeekabooBitmapCache.instance.put(filterCacheKey, filteredBitmap)
+            return byteArray
+        }
     }
+
     return null
+}
+
+private fun applyFilter(
+    originalBitmap: Bitmap,
+    filterOptions: FilterOptions,
+): Bitmap {
+    val colorMatrix = ColorMatrix()
+    when (filterOptions) {
+        FilterOptions.Default -> return originalBitmap
+        FilterOptions.GrayScale -> colorMatrix.setSaturation(0f)
+        FilterOptions.Sepia -> {
+            colorMatrix.setSaturation(0f)
+            val sepiaMatrix =
+                ColorMatrix().apply {
+                    setScale(1f, 0.95f, 0.82f, 1f)
+                }
+            colorMatrix.postConcat(sepiaMatrix)
+        }
+        FilterOptions.Invert -> {
+            colorMatrix.set(
+                floatArrayOf(
+                    -1f, 0f, 0f, 0f, 255f,
+                    0f, -1f, 0f, 0f, 255f,
+                    0f, 0f, -1f, 0f, 255f,
+                    0f, 0f, 0f, 1f, 0f,
+                ),
+            )
+        }
+    }
+
+    val paint =
+        Paint().apply {
+            colorFilter = ColorMatrixColorFilter(colorMatrix)
+        }
+
+    return Bitmap.createBitmap(originalBitmap.width, originalBitmap.height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        val canvas = Canvas(bitmap)
+        canvas.drawBitmap(originalBitmap, 0f, 0f, paint)
+    }
 }

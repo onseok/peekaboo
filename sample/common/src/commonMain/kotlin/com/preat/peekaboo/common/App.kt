@@ -58,6 +58,7 @@ import com.preat.peekaboo.common.icon.IconCached
 import com.preat.peekaboo.common.icon.IconClose
 import com.preat.peekaboo.common.icon.IconWarning
 import com.preat.peekaboo.common.style.PeekabooTheme
+import com.preat.peekaboo.image.picker.FilterOptions
 import com.preat.peekaboo.image.picker.ResizeOptions
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
@@ -93,6 +94,9 @@ fun App() {
             scope = scope,
             // Resize options are customizable. Default is set to 800 x 800 pixels.
             resizeOptions = ResizeOptions(width = 1200, height = 1200),
+            // Default is 'Default', which applies no filter.
+            // Other available options: GrayScale, Sepia, Invert.
+            filterOptions = FilterOptions.GrayScale,
             onResult = { byteArrays ->
                 images =
                     byteArrays.map { byteArray ->
