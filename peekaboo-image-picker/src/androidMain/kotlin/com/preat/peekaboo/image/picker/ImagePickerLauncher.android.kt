@@ -266,10 +266,10 @@ private fun applyFilter(
 
 private fun rotateImageIfRequired(
     context: Context,
-    img: Bitmap,
-    selectedImage: Uri,
+    bitmap: Bitmap,
+    uri: Uri,
 ): Bitmap {
-    val inputStream = context.contentResolver.openInputStream(selectedImage) ?: return img
+    val inputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
     val exif = ExifInterface(inputStream)
     val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
 
@@ -280,5 +280,5 @@ private fun rotateImageIfRequired(
         ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
     }
 
-    return Bitmap.createBitmap(img, 0, 0, img.width, img.height, matrix, true)
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }
