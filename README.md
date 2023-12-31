@@ -31,7 +31,7 @@ In your `commonMain` configuration, add the desired dependency, either **`peekab
 ```kotlin
 commonMain {
     dependencies {
-    	// peekaboo-ui
+        // peekaboo-ui
         implementation("io.github.team-preat:peekaboo-ui:$latest_version")
 
         // peekaboo-image-picker
@@ -47,7 +47,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.3.3"
+peekaboo = "0.4.0"
 
 [libraries]
 peekaboo-ui = { module = "io.github.team-preat:peekaboo-ui", version.ref = "peekaboo" }
@@ -248,6 +248,34 @@ val multipleImagePicker = rememberImagePickerLauncher(
 ```
 
 >💡 Note: While resizing, the aspect ratio of the original images is preserved. The final dimensions may slightly vary to maintain the original proportions.
+
+<br/>
+
+## Image Filter Options
+**`peekaboo-image-picker`** now offers customizable filter options for selected images.
+
+This feature is available on both `Android` and `iOS` devices.
+
+| Default                                                         | GrayScale                                                     | Sepia                                                     | Invert                                                     |
+|-----------------------------------------------------------------|---------------------------------------------------------|---------------------------------------------------------|---------------------------------------------------------|
+| <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/2f47becf-1512-47e2-83c1-2120d58d6d11" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/3c864a79-83df-451c-91e1-1e71fbdb3066" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/52dee8e8-1979-4725-bfca-12af1b3c4b3d" width="300" height="700"> | <img src="https://github.com/TEAM-PREAT/peekaboo/assets/76798309/cbe927d1-55c2-40c5-ae35-2be81997e9fb" width="300" height="700"> |
+
+### Usage
+Set the `filterOptions` parameter in `rememberImagePickerLauncher`:
+
+```kotlin
+val imagePicker = rememberImagePickerLauncher(
+    selectionMode = SelectionMode.Single,
+    scope = rememberCoroutineScope(),
+    filterOptions = FilterOptions.GrayScale,
+    onResult = { byteArrays ->
+        // Process the filtered images' ByteArrays
+    }
+)
+```
+
+>💡 Note: The default filter option is `Default`, which applies no filter.
+> Choose from `GrayScale`, `Sepia`, or `Invert` for different effects.
 
 <br/>
 
