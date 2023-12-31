@@ -27,6 +27,12 @@ import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeMake
+import platform.CoreImage.CIContext
+import platform.CoreImage.CIFilter
+import platform.CoreImage.CIImage
+import platform.CoreImage.createCGImage
+import platform.CoreImage.filterWithName
+import platform.Foundation.setValue
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerConfigurationSelectionOrdered
 import platform.PhotosUI.PHPickerFilter
@@ -51,6 +57,7 @@ actual fun rememberImagePickerLauncher(
     selectionMode: SelectionMode,
     scope: CoroutineScope,
     resizeOptions: ResizeOptions,
+    filterOptions: FilterOptions,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher {
     val delegate =
@@ -74,7 +81,12 @@ actual fun rememberImagePickerLauncher(
                         scope.launch(Dispatchers.Main) {
                             nsData?.let {
                                 val image = UIImage.imageWithData(it)
-                                val resizedImage = image?.fitInto(resizeOptions.width, resizeOptions.height)
+                                val resizedImage =
+                                    image?.fitInto(
+                                        resizeOptions.width,
+                                        resizeOptions.height,
+                                        filterOptions,
+                                    )
                                 val bytes = resizedImage?.toByteArray()
                                 if (bytes != null) {
                                     imageData.add(bytes)
@@ -120,15 +132,24 @@ private fun UIImage.toByteArray(): ByteArray {
 private fun UIImage.fitInto(
     width: Int,
     height: Int,
+    filterOptions: FilterOptions,
 ): UIImage {
     val targetSize = CGSizeMake(width.toDouble(), height.toDouble())
-    return this.resize(targetSize)
+    val resizedImage = this.resize(targetSize)
+    return applyFilterToUIImage(resizedImage, filterOptions)
 }
 
 @OptIn(ExperimentalForeignApi::class)
 private fun UIImage.resize(targetSize: CValue<CGSize>): UIImage {
     UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
-    this.drawInRect(CGRectMake(0.0, 0.0, targetSize.useContents { width }, targetSize.useContents { height }))
+    this.drawInRect(
+        CGRectMake(
+            0.0,
+            0.0,
+            targetSize.useContents { width },
+            targetSize.useContents { height },
+        ),
+    )
     val newImage = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
 
@@ -159,6 +180,41 @@ private fun createPHPickerViewController(
         )
     pickerViewController.delegate = delegate
     return pickerViewController
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun applyFilterToUIImage(
+    image: UIImage,
+    filterOptions: FilterOptions,
+): UIImage {
+    val ciImage = CIImage.imageWithCGImage(image.CGImage)
+
+    val filteredCIImage =
+        when (filterOptions) {
+            FilterOptions.GrayScale -> {
+                CIFilter.filterWithName("CIPhotoEffectNoir")?.apply {
+                    setValue(ciImage, forKey = "inputImage")
+                }?.outputImage
+            }
+            FilterOptions.Sepia -> {
+                CIFilter.filterWithName("CISepiaTone")?.apply {
+                    setValue(ciImage, forKey = "inputImage")
+                    setValue(0.8, forKey = "inputIntensity")
+                }?.outputImage
+            }
+            FilterOptions.Invert -> {
+                CIFilter.filterWithName("CIColorInvert")?.apply {
+                    setValue(ciImage, forKey = "inputImage")
+                }?.outputImage
+            }
+            FilterOptions.Default -> ciImage
+        }
+
+    val context = CIContext.contextWithOptions(null)
+    return filteredCIImage?.let {
+        val filteredCGImage = context.createCGImage(it, fromRect = it.extent())
+        UIImage.imageWithCGImage(filteredCGImage)
+    } ?: image
 }
 
 actual class ImagePickerLauncher actual constructor(

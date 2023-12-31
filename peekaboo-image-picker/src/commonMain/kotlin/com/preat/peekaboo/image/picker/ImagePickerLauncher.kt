@@ -23,6 +23,7 @@ expect fun rememberImagePickerLauncher(
     selectionMode: SelectionMode = SelectionMode.Single,
     scope: CoroutineScope,
     resizeOptions: ResizeOptions = ResizeOptions(),
+    filterOptions: FilterOptions = FilterOptions.Default,
     onResult: (List<ByteArray>) -> Unit,
 ): ImagePickerLauncher
 
@@ -40,6 +41,16 @@ data class ResizeOptions(
     val width: Int = 800,
     val height: Int = 800,
 )
+
+sealed interface FilterOptions {
+    data object Default : FilterOptions
+
+    data object GrayScale : FilterOptions
+
+    data object Sepia : FilterOptions
+
+    data object Invert : FilterOptions
+}
 
 expect class ImagePickerLauncher(
     selectionMode: SelectionMode,
