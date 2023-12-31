@@ -19,6 +19,7 @@ appcompat = "1.6.1"
 material = "1.11.0"
 accompanist = "0.32.0"
 camerax = "1.3.1"
+exifinterface = "1.3.7"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -40,6 +41,7 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

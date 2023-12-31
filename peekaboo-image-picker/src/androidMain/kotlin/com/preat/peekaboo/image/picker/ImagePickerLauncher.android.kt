@@ -21,6 +21,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.exifinterface.media.ExifInterface
 import com.preat.peekaboo.image.picker.PeekabooBitmapCache.bitmapToByteArray
 import com.preat.peekaboo.image.picker.SelectionMode.Companion.INFINITY
 import kotlinx.coroutines.CoroutineScope
@@ -209,7 +211,9 @@ private fun resizeImage(
         }
 
     resizedBitmap?.let {
-        val filteredBitmap = applyFilter(it, filterOptions)
+        val rotatedBitmap = rotateImageIfRequired(context, it, uri)
+        val filteredBitmap = applyFilter(rotatedBitmap, filterOptions)
+
         ByteArrayOutputStream().use { byteArrayOutputStream ->
             filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
             val byteArray = byteArrayOutputStream.toByteArray()
@@ -258,4 +262,23 @@ private fun applyFilter(
         val canvas = Canvas(bitmap)
         canvas.drawBitmap(originalBitmap, 0f, 0f, paint)
     }
+}
+
+private fun rotateImageIfRequired(
+    context: Context,
+    img: Bitmap,
+    selectedImage: Uri,
+): Bitmap {
+    val inputStream = context.contentResolver.openInputStream(selectedImage) ?: return img
+    val exif = ExifInterface(inputStream)
+    val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+    val matrix = Matrix()
+    when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+    }
+
+    return Bitmap.createBitmap(img, 0, 0, img.width, img.height, matrix, true)
 }
