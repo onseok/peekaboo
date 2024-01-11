@@ -40,12 +40,13 @@ internal object PeekabooImageResizer {
         width: Int,
         height: Int,
         resizeThresholdBytes: Long,
+        compressionQuality: Double,
         filterOptions: FilterOptions,
         onResult: (ByteArray?) -> Unit,
     ) {
         coroutineScope.launch(Dispatchers.Default) {
             if (getImageSize(context, uri) > resizeThresholdBytes) {
-                val byteArray = resizeImage(context, uri, width, height, filterOptions)
+                val byteArray = resizeImage(context, uri, width, height, compressionQuality, filterOptions)
                 withContext(Dispatchers.Main) {
                     onResult(byteArray)
                 }
@@ -86,6 +87,7 @@ internal object PeekabooImageResizer {
         uri: Uri,
         width: Int,
         height: Int,
+        compression: Double,
         filterOptions: FilterOptions,
     ): ByteArray? {
         val resizeCacheKey = "${uri}_w${width}_h$height"
@@ -127,7 +129,7 @@ internal object PeekabooImageResizer {
             val filteredBitmap = applyFilter(rotatedBitmap, filterOptions)
 
             ByteArrayOutputStream().use { byteArrayOutputStream ->
-                filteredBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+                filteredBitmap.compress(Bitmap.CompressFormat.JPEG, (100 * compression).toInt(), byteArrayOutputStream)
                 val byteArray = byteArrayOutputStream.toByteArray()
                 PeekabooBitmapCache.instance.put(filterCacheKey, filteredBitmap)
                 return byteArray

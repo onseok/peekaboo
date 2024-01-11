@@ -45,6 +45,7 @@ data class ResizeOptions(
     val width: Int = DEFAULT_RESIZE_IMAGE_WIDTH,
     val height: Int = DEFAULT_RESIZE_IMAGE_HEIGHT,
     val resizeThresholdBytes: Long = DEFAULT_RESIZE_THRESHOLD_BYTES,
+    val compressionQuality: Double = 1.0,
 )
 
 sealed interface FilterOptions {

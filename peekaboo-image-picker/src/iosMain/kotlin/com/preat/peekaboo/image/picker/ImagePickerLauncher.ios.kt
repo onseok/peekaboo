@@ -88,7 +88,7 @@ actual fun rememberImagePickerLauncher(
                                         resizeOptions.resizeThresholdBytes,
                                         filterOptions,
                                     )
-                                val bytes = resizedImage?.toByteArray()
+                                val bytes = resizedImage?.toByteArray(resizeOptions.compressionQuality)
                                 if (bytes != null) {
                                     imageData.add(bytes)
                                 }
@@ -122,8 +122,8 @@ actual fun rememberImagePickerLauncher(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun UIImage.toByteArray(): ByteArray {
-    val jpegData = UIImageJPEGRepresentation(this, 1.0)!!
+private fun UIImage.toByteArray(compressionQuality: Double): ByteArray {
+    val jpegData = UIImageJPEGRepresentation(this, compressionQuality)!!
     return ByteArray(jpegData.length.toInt()).apply {
         memcpy(this.refTo(0), jpegData.bytes, jpegData.length)
     }
