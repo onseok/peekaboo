@@ -41,7 +41,7 @@ internal object PeekabooImageResizer {
         filterOptions: FilterOptions,
         onResult: (ByteArray?) -> Unit,
     ) {
-        coroutineScope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.Default) {
             val byteArray = resizeImage(context, uri, width, height, filterOptions)
             withContext(Dispatchers.Main) {
                 onResult(byteArray)
@@ -49,7 +49,7 @@ internal object PeekabooImageResizer {
         }
     }
 
-    private fun resizeImage(
+    private suspend fun resizeImage(
         context: Context,
         uri: Uri,
         width: Int,
@@ -59,12 +59,20 @@ internal object PeekabooImageResizer {
         val resizeCacheKey = "${uri}_w${width}_h$height"
         val filterCacheKey = "${resizeCacheKey}_$filterOptions"
 
-        PeekabooBitmapCache.instance.get(filterCacheKey)?.let { cachedBitmap ->
-            return PeekabooBitmapCache.bitmapToByteArray(cachedBitmap)
+        val cachedFilterBitmap = withContext(Dispatchers.IO) {
+            PeekabooBitmapCache.instance.get(filterCacheKey)
+        }
+
+        cachedFilterBitmap?.run {
+            return PeekabooBitmapCache.bitmapToByteArray(this)
+        }
+
+        val cachedResizeBitmap = withContext(Dispatchers.IO) {
+            PeekabooBitmapCache.instance.get(resizeCacheKey)
         }
 
         val resizedBitmap =
-            PeekabooBitmapCache.instance.get(resizeCacheKey) ?: run {
+            cachedResizeBitmap ?: run {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeStream(inputStream, null, options)
