@@ -90,7 +90,15 @@ import platform.UIKit.UIImage
 import platform.UIKit.UIImageOrientation
 import platform.UIKit.UIImagePNGRepresentation
 import platform.UIKit.UIView
+import platform.darwin.DISPATCH_QUEUE_PRIORITY_DEFAULT
 import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_global_queue
+import platform.darwin.dispatch_get_main_queue
+import platform.darwin.dispatch_group_create
+import platform.darwin.dispatch_group_enter
+import platform.darwin.dispatch_group_leave
+import platform.darwin.dispatch_group_notify
 import platform.posix.memcpy
 
 private val deviceTypes =
@@ -173,6 +181,7 @@ private fun BoxScope.AuthorizedCamera(
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
 ) {
+    var cameraReady by remember { mutableStateOf(false) }
     val camera: AVCaptureDevice? =
         remember {
             discoverySessionWithDeviceTypes(
@@ -185,21 +194,26 @@ private fun BoxScope.AuthorizedCamera(
                     },
             ).devices.firstOrNull() as? AVCaptureDevice
         }
+
     if (camera != null) {
         RealDeviceCamera(
             camera = camera,
+            onCameraReady = { cameraReady = true },
             captureIcon = captureIcon,
             convertIcon = convertIcon,
             progressIndicator = progressIndicator,
             onCapture = onCapture,
         )
     } else {
-        Text(
-            """
-            Camera is not available on simulator.
-            Please try to run on a real iOS device.
-            """.trimIndent(),
-            color = Color.White,
+        Text("Camera is not available on simulator. Please try to run on a real iOS device.", color = Color.White)
+    }
+
+    if (!cameraReady) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
         )
     }
 }
@@ -209,6 +223,7 @@ private fun BoxScope.AuthorizedCamera(
 @Composable
 private fun BoxScope.RealDeviceCamera(
     camera: AVCaptureDevice,
+    onCameraReady: () -> Unit,
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
@@ -300,6 +315,7 @@ private fun BoxScope.RealDeviceCamera(
 
     // Update captureSession with new camera configuration whenever isFrontCamera changed.
     LaunchedEffect(isFrontCamera) {
+        val dispatchGroup = dispatch_group_create()
         captureSession.beginConfiguration()
         captureSession.inputs.forEach { captureSession.removeInput(it as AVCaptureInput) }
 
@@ -318,8 +334,16 @@ private fun BoxScope.RealDeviceCamera(
             }
         }
 
+        dispatch_group_enter(dispatchGroup)
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+            captureSession.startRunning()
+            dispatch_group_leave(dispatchGroup)
+        }
         captureSession.commitConfiguration()
-        captureSession.startRunning()
+
+        dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+            onCameraReady()
+        }
     }
 
     DisposableEffect(Unit) {
@@ -376,10 +400,18 @@ private fun BoxScope.RealDeviceCamera(
         modifier = Modifier.fillMaxSize(),
         background = Color.Black,
         factory = {
+            val dispatchGroup = dispatch_group_create()
             val cameraContainer = UIView()
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
             cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
-            captureSession.startRunning()
+            dispatch_group_enter(dispatchGroup)
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+                captureSession.startRunning()
+                dispatch_group_leave(dispatchGroup)
+            }
+            dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+                onCameraReady()
+            }
             cameraContainer
         },
         onResize = { view: UIView, rect: CValue<CGRect> ->
