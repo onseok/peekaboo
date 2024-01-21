@@ -59,20 +59,16 @@ internal object PeekabooImageResizer {
         val resizeCacheKey = "${uri}_w${width}_h$height"
         val filterCacheKey = "${resizeCacheKey}_$filterOptions"
 
-        val cachedFilterBitmap = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             PeekabooBitmapCache.instance.get(filterCacheKey)
-        }
-
-        cachedFilterBitmap?.run {
-            return PeekabooBitmapCache.bitmapToByteArray(this)
-        }
-
-        val cachedResizeBitmap = withContext(Dispatchers.IO) {
-            PeekabooBitmapCache.instance.get(resizeCacheKey)
+        }?.let { cachedBitmap ->
+            return PeekabooBitmapCache.bitmapToByteArray(cachedBitmap)
         }
 
         val resizedBitmap =
-            cachedResizeBitmap ?: run {
+            withContext(Dispatchers.IO) {
+                PeekabooBitmapCache.instance.get(resizeCacheKey)
+            } ?: run {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeStream(inputStream, null, options)
