@@ -47,7 +47,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.4.0"
+peekaboo = "0.4.1"
 
 [libraries]
 peekaboo-ui = { module = "io.github.team-preat:peekaboo-ui", version.ref = "peekaboo" }
