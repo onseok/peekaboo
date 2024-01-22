@@ -130,12 +130,28 @@ private fun UIImage.toByteArray(): ByteArray {
 
 @OptIn(ExperimentalForeignApi::class)
 private fun UIImage.fitInto(
-    width: Int,
-    height: Int,
+    maxWidth: Int,
+    maxHeight: Int,
     filterOptions: FilterOptions,
 ): UIImage {
-    val targetSize = CGSizeMake(width.toDouble(), height.toDouble())
+    val originalWidth = this.size.useContents { width }
+    val originalHeight = this.size.useContents { height }
+    val originalRatio = originalWidth / originalHeight
+
+    val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
+    val scale =
+        if (originalRatio > targetRatio) {
+            maxWidth.toDouble() / originalWidth
+        } else {
+            maxHeight.toDouble() / originalHeight
+        }
+
+    val newWidth = originalWidth * scale
+    val newHeight = originalHeight * scale
+
+    val targetSize = CGSizeMake(newWidth, newHeight)
     val resizedImage = this.resize(targetSize)
+
     return applyFilterToUIImage(resizedImage, filterOptions)
 }
 
