@@ -18,8 +18,8 @@ plugins {
 }
 
 allprojects {
-    group = "io.github.team-preat"
-    version = "0.4.2"
+    group = "io.github.onseok"
+    version = "0.4.3"
 }
 
 nexusPublishing {
