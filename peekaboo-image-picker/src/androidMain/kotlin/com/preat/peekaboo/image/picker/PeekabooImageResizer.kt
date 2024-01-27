@@ -24,6 +24,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,14 +39,47 @@ internal object PeekabooImageResizer {
         uri: Uri,
         width: Int,
         height: Int,
+        resizeThresholdBytes: Long,
         filterOptions: FilterOptions,
         onResult: (ByteArray?) -> Unit,
     ) {
         coroutineScope.launch(Dispatchers.Default) {
-            val byteArray = resizeImage(context, uri, width, height, filterOptions)
-            withContext(Dispatchers.Main) {
-                onResult(byteArray)
+            if (getImageSize(context, uri) > resizeThresholdBytes) {
+                val byteArray = resizeImage(context, uri, width, height, filterOptions)
+                withContext(Dispatchers.Main) {
+                    onResult(byteArray)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onResult(getOriginalImageByteArray(context, uri))
+                }
             }
+        }
+    }
+
+    private fun getImageSize(
+        context: Context,
+        uri: Uri,
+    ): Int {
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+        val sizeIndex = cursor?.getColumnIndex(OpenableColumns.SIZE)
+        cursor?.moveToFirst()
+        val size = sizeIndex?.let { cursor.getInt(it) } ?: 0
+        cursor?.close()
+        return size
+    }
+
+    private fun getOriginalImageByteArray(
+        context: Context,
+        uri: Uri,
+    ): ByteArray? {
+        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            val rotatedBitmap = rotateImageIfRequired(context, bitmap, uri)
+
+            ByteArrayOutputStream().apply {
+                rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, this)
+            }.toByteArray()
         }
     }
 

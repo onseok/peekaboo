@@ -85,6 +85,7 @@ actual fun rememberImagePickerLauncher(
                                     image?.fitInto(
                                         resizeOptions.width,
                                         resizeOptions.height,
+                                        resizeOptions.resizeThresholdBytes,
                                         filterOptions,
                                     )
                                 val bytes = resizedImage?.toByteArray()
@@ -132,27 +133,33 @@ private fun UIImage.toByteArray(): ByteArray {
 private fun UIImage.fitInto(
     maxWidth: Int,
     maxHeight: Int,
+    resizeThresholdBytes: Long,
     filterOptions: FilterOptions,
 ): UIImage {
-    val originalWidth = this.size.useContents { width }
-    val originalHeight = this.size.useContents { height }
-    val originalRatio = originalWidth / originalHeight
+    val imageData = this.toByteArray()
+    if (imageData.size > resizeThresholdBytes) {
+        val originalWidth = this.size.useContents { width }
+        val originalHeight = this.size.useContents { height }
+        val originalRatio = originalWidth / originalHeight
 
-    val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
-    val scale =
-        if (originalRatio > targetRatio) {
-            maxWidth.toDouble() / originalWidth
-        } else {
-            maxHeight.toDouble() / originalHeight
-        }
+        val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
+        val scale =
+            if (originalRatio > targetRatio) {
+                maxWidth.toDouble() / originalWidth
+            } else {
+                maxHeight.toDouble() / originalHeight
+            }
 
-    val newWidth = originalWidth * scale
-    val newHeight = originalHeight * scale
+        val newWidth = originalWidth * scale
+        val newHeight = originalHeight * scale
 
-    val targetSize = CGSizeMake(newWidth, newHeight)
-    val resizedImage = this.resize(targetSize)
+        val targetSize = CGSizeMake(newWidth, newHeight)
+        val resizedImage = this.resize(targetSize)
 
-    return applyFilterToUIImage(resizedImage, filterOptions)
+        return applyFilterToUIImage(resizedImage, filterOptions)
+    } else {
+        return this
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)
