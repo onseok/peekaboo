@@ -74,6 +74,7 @@ private fun pickSingleImage(
                         uri = uri,
                         width = resizeOptions.width,
                         height = resizeOptions.height,
+                        resizeThresholdBytes = resizeOptions.resizeThresholdBytes,
                         filterOptions = filterOptions,
                     ) { resizedImage ->
                         if (resizedImage != null) {
@@ -127,6 +128,7 @@ private fun pickMultipleImages(
                         uri = uri,
                         width = resizeOptions.width,
                         height = resizeOptions.height,
+                        resizeThresholdBytes = resizeOptions.resizeThresholdBytes,
                         filterOptions = filterOptions,
                     ) { resizedImage ->
                         resizedImage?.let {
