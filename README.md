@@ -1,10 +1,10 @@
 # peekaboo
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.21-blue.svg?logo=kotlin)](http://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-v1.5.11-blue)](https://github.com/JetBrains/compose-multiplatform)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.team-preat/peekaboo-image-picker?color=orange)](https://search.maven.org/search?q=g:io.github.team-preat)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.onseok/peekaboo-image-picker?color=orange)](https://search.maven.org/search?q=g:io.github.onseok)
 [![Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
-[![Build](https://github.com/team-preat/peekaboo/actions/workflows/ci_check.yml/badge.svg)](https://github.com/team-preat/peekaboo/actions/workflows/ci_check.yml)
+[![Build](https://github.com/onseok/peekaboo/actions/workflows/ci_check.yml/badge.svg)](https://github.com/onseok/peekaboo/actions/workflows/ci_check.yml)
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
 [![Featured in androidweekly.net](https://img.shields.io/badge/Featured%20in%20androidweekly.net-Issue%20%23601-4998C2)](https://androidweekly.net/issues/issue-601)
@@ -32,10 +32,10 @@ In your `commonMain` configuration, add the desired dependency, either **`peekab
 commonMain {
     dependencies {
         // peekaboo-ui
-        implementation("io.github.team-preat:peekaboo-ui:$latest_version")
+        implementation("io.github.onseok:peekaboo-ui:$latest_version")
 
         // peekaboo-image-picker
-        implementation("io.github.team-preat:peekaboo-image-picker:$latest_version")
+        implementation("io.github.onseok:peekaboo-image-picker:$latest_version")
     }
 }
 ```
@@ -47,11 +47,11 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.4.2"
+peekaboo = "0.4.3"
 
 [libraries]
-peekaboo-ui = { module = "io.github.team-preat:peekaboo-ui", version.ref = "peekaboo" }
-peekaboo-image-picker = { module = "io.github.team-preat:peekaboo-image-picker", version.ref = "peekaboo" }
+peekaboo-ui = { module = "io.github.onseok:peekaboo-ui", version.ref = "peekaboo" }
+peekaboo-image-picker = { module = "io.github.onseok:peekaboo-image-picker", version.ref = "peekaboo" }
 ```
 
 Then, in your `commonMain` configuration, reference the defined version:
@@ -204,17 +204,22 @@ Button(
 <br/>
 
 ## Image Resizing Options
-`peekaboo` offers customizable resizing options for both single and multiple image selections. <br/>
+`peekaboo` offers customizable resizing options for both single and multiple image selections, along with a new feature to resize images only if they exceed a certain file size. <br/>
 This feature allows you to resize the selected images to specific dimensions, optimizing them for your application's requirements and enhancing performance.
 
 - The default resizing dimensions are set to `800 x 800` pixels.
-- You can customize the resizing dimensions according to your needs.
+- The default threshold for resizing is set to `1MB`, meaning images larger than this size will be resized.
+- You can customize the resizing dimensions and threshold according to your needs.
 
 ### Usage
-Set the `resizeOptions` parameter in `rememberImagePickerLauncher` with your desired dimensions:
+Set the `resizeOptions` parameter in `rememberImagePickerLauncher` with your desired dimensions and threshold:
 
 ```kotlin
-val resizeOptions = ResizeOptions(width = 1200, height = 1200) // Custom dimensions
+val resizeOptions = ResizeOptions(
+    width = 1200, // Custom width
+    height = 1200, // Custom height
+    resizeThresholdBytes = 2 * 1024 * 1024L // Custom threshold for 2MB
+)
 ```
 
 #### Single Image Selection with Resizing
@@ -299,7 +304,7 @@ If you'd like to contribute, please feel free to create a PR or open an issue. ð
 <br/>
 
 ## Stargazers :star:
-Support it by joining __[stargazers](https://github.com/TEAM-PREAT/peekaboo/stargazers)__ for this repository. :star: <br>
+Support it by joining __[stargazers](https://github.com/onseok/peekaboo/stargazers)__ for this repository. :star: <br>
 
 ## License
 
