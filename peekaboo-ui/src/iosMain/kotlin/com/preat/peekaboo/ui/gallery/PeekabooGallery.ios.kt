@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
-@Suppress("FunctionName")
 @Composable
 actual fun PeekabooGallery(
     modifier: Modifier,
@@ -31,6 +30,6 @@ actual fun PeekabooGallery(
     permissionDeniedContent: @Composable () -> Unit,
     onImageSelected: (ByteArray?) -> Unit,
 ) {
+    // TODO("Implement PeekabooGallery for iOS.")
     permissionDeniedContent()
-    TODO("Implement PeekabooGallery for iOS.")
 }

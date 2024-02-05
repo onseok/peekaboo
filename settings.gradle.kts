@@ -41,7 +41,6 @@ rootProject.name = "peekaboo"
 include(
     ":peekaboo-ui",
     ":peekaboo-image-picker",
-    ":peekaboo-camera",
     ":sample:android",
     ":sample:common",
 )

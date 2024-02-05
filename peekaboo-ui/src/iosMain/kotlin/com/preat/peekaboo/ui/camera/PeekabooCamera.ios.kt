@@ -110,7 +110,6 @@ private val deviceTypes =
         AVCaptureDeviceTypeBuiltInDuoCamera,
     )
 
-@Suppress("FunctionName")
 @Composable
 actual fun PeekabooCamera(
     modifier: Modifier,
@@ -172,7 +171,6 @@ actual fun PeekabooCamera(
     }
 }
 
-@Suppress("FunctionName")
 @Composable
 private fun BoxScope.AuthorizedCamera(
     cameraMode: CameraMode,
@@ -218,7 +216,6 @@ private fun BoxScope.AuthorizedCamera(
     }
 }
 
-@Suppress("FunctionName")
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 @Composable
 private fun BoxScope.RealDeviceCamera(

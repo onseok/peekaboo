@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
-@Suppress("FunctionName")
 @Composable
 expect fun PeekabooGallery(
     modifier: Modifier = Modifier,

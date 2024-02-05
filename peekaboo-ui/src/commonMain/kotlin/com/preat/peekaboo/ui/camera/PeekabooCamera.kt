@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
  * it's recommended to implement a separate permission check logic before rendering the PeekabooCamera composable. This way, you can ensure the
  * camera permission is granted before the camera UI is displayed, or handle the permission denial appropriately outside of the PeekabooCamera scope.
  */
-@Suppress("FunctionName")
 @Composable
 expect fun PeekabooCamera(
     modifier: Modifier,

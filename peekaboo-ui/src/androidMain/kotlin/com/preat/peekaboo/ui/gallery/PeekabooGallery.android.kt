@@ -52,7 +52,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import java.io.ByteArrayOutputStream
 
-@Suppress("FunctionName")
 @OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
 @Composable
 actual fun PeekabooGallery(

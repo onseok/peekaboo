@@ -41,7 +41,6 @@ import com.preat.peekaboo.common.icon.IconWarning
 import com.preat.peekaboo.ui.camera.CameraMode
 import com.preat.peekaboo.ui.camera.PeekabooCamera
 
-@Suppress("FunctionName")
 @Composable
 internal fun PeekabooCameraView(
     modifier: Modifier = Modifier,
