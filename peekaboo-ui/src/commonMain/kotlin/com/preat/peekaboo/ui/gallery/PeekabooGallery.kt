@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
+@ExperimentalPeekabooGalleryApi
 @Composable
 expect fun PeekabooGallery(
     modifier: Modifier = Modifier,
@@ -28,6 +29,7 @@ expect fun PeekabooGallery(
     lazyGridState: LazyGridState = rememberLazyGridState(),
     backgroundColor: Color = Color.Black,
     header: @Composable () -> Unit = {},
+    progressIndicator: @Composable () -> Unit = {},
     permissionDeniedContent: @Composable () -> Unit = {},
     onImageSelected: (ByteArray?) -> Unit,
 )
