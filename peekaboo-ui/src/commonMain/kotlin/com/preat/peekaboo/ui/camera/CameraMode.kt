@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.preat.peekaboo.ui
+package com.preat.peekaboo.ui.camera
 
 /**
  * Represents the camera modes available in the `PeekabooCamera` composable.
