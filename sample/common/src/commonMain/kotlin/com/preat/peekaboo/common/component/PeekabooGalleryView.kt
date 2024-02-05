@@ -37,7 +37,6 @@ import com.preat.peekaboo.common.icon.IconClose
 import com.preat.peekaboo.common.icon.IconWarning
 import com.preat.peekaboo.ui.gallery.PeekabooGallery
 
-@Suppress("FunctionName")
 @Composable
 internal fun PeekabooGalleryView(
     modifier: Modifier = Modifier,

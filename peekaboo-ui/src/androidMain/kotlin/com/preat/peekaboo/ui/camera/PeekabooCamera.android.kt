@@ -51,7 +51,6 @@ import kotlin.coroutines.suspendCoroutine
 
 private val executor = Executors.newSingleThreadExecutor()
 
-@Suppress("FunctionName")
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun PeekabooCamera(
@@ -90,7 +89,6 @@ actual fun PeekabooCamera(
     }
 }
 
-@Suppress("FunctionName")
 @Composable
 private fun CameraWithGrantedPermission(
     modifier: Modifier,

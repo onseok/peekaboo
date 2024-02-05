@@ -52,7 +52,6 @@ import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import com.preat.peekaboo.image.picker.toImageBitmap
 
-@Suppress("FunctionName")
 @Composable
 fun App() {
     val scope = rememberCoroutineScope()
