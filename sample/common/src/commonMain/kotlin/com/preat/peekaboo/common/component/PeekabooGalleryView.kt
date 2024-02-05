@@ -38,8 +38,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.preat.peekaboo.common.icon.IconClose
 import com.preat.peekaboo.common.icon.IconWarning
+import com.preat.peekaboo.ui.gallery.ExperimentalPeekabooGalleryApi
 import com.preat.peekaboo.ui.gallery.PeekabooGallery
 
+@OptIn(ExperimentalPeekabooGalleryApi::class)
 @Composable
 internal fun PeekabooGalleryView(
     modifier: Modifier = Modifier,
