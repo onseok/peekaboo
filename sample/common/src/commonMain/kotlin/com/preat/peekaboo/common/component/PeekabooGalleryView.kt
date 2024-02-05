@@ -17,16 +17,19 @@ package com.preat.peekaboo.common.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,51 +46,63 @@ internal fun PeekabooGalleryView(
     onImageSelected: (ByteArray?) -> Unit,
     onBack: () -> Unit,
 ) {
-    PeekabooGallery(
-        modifier = modifier,
-        header = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(
-                    onClick = onBack,
+    Box(modifier = modifier) {
+        PeekabooGallery(
+            modifier = Modifier.fillMaxSize(),
+            header = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = IconClose,
-                        contentDescription = "Back Button",
-                        tint = Color.White,
+                    IconButton(
+                        onClick = onBack,
+                    ) {
+                        Icon(
+                            imageVector = IconClose,
+                            contentDescription = "Back Button",
+                            tint = Color.White,
+                        )
+                    }
+                    Text(
+                        modifier = Modifier.weight(1f),
+                        text = "PICK A PHOTO",
+                        style = MaterialTheme.typography.h5.copy(color = Color.White),
                     )
                 }
-                Text(
-                    modifier = Modifier.weight(1f),
-                    text = "PICK A PHOTO",
-                    style = MaterialTheme.typography.h5.copy(color = Color.White),
+            },
+            progressIndicator = {
+                CircularProgressIndicator(
+                    modifier =
+                        Modifier
+                            .size(60.dp)
+                            .align(Alignment.Center),
+                    color = Color.White,
+                    strokeWidth = 6.dp,
                 )
-            }
-        },
-        permissionDeniedContent = {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(color = MaterialTheme.colors.background),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = IconWarning,
-                    contentDescription = "Warning Icon",
-                    tint = MaterialTheme.colors.onBackground,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Please grant the storage permission!",
-                    color = MaterialTheme.colors.onBackground,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        },
-        onImageSelected = onImageSelected,
-    )
+            },
+            permissionDeniedContent = {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(color = MaterialTheme.colors.background),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = IconWarning,
+                        contentDescription = "Warning Icon",
+                        tint = MaterialTheme.colors.onBackground,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Please grant the storage permission!",
+                        color = MaterialTheme.colors.onBackground,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            },
+            onImageSelected = onImageSelected,
+        )
+    }
 }
