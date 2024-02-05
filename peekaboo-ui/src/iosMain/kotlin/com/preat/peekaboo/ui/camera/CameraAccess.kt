@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.preat.peekaboo.ui
+package com.preat.peekaboo.ui.camera
 
 internal sealed interface CameraAccess {
     data object Undefined : CameraAccess
