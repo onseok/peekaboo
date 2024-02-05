@@ -39,6 +39,10 @@ import androidx.compose.material.Card
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -53,6 +57,7 @@ import com.google.accompanist.permissions.shouldShowRationale
 import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
+@ExperimentalPeekabooGalleryApi
 @Composable
 actual fun PeekabooGallery(
     modifier: Modifier,
@@ -60,10 +65,13 @@ actual fun PeekabooGallery(
     lazyGridState: LazyGridState,
     backgroundColor: Color,
     header: @Composable () -> Unit,
+    progressIndicator: @Composable () -> Unit,
     permissionDeniedContent: @Composable () -> Unit,
     onImageSelected: (ByteArray?) -> Unit,
 ) {
     val context = LocalContext.current
+    var isLoading by remember { mutableStateOf(true) }
+
     val storagePermissionState =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             rememberPermissionState(
@@ -75,48 +83,58 @@ actual fun PeekabooGallery(
             )
         }
 
-    if (storagePermissionState.status.isGranted) {
-        val photos = rememberMediaPhotos(context = context)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(state.columns),
-            modifier = modifier.background(backgroundColor),
-            state = lazyGridState,
-            contentPadding = PaddingValues(horizontal = state.contentPadding.dp),
-            horizontalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
-            verticalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                header()
-            }
-            items(
-                items = photos,
-                key = { it.uri },
-            ) { photo ->
-                val bitmap = getOriginalImageByteArray(context, photo.uri)?.toBitmap()
-                bitmap?.let {
-                    Card(
-                        shape = RoundedCornerShape(state.cornerSize.dp),
-                        modifier = Modifier.aspectRatio(1f),
-                        onClick = { onImageSelected(getOriginalImageByteArray(context, photo.uri)) },
-                    ) {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.clip(shape = RoundedCornerShape(state.cornerSize.dp)),
-                        )
+    Box(modifier = modifier.background(backgroundColor)) {
+        if (storagePermissionState.status.isGranted) {
+            val photos =
+                rememberMediaPhotos(
+                    context = context,
+                    onPhotosLoaded = { loaded ->
+                        isLoading = !loaded
+                    },
+                )
+
+            if (isLoading) {
+                progressIndicator()
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(state.columns),
+                    state = lazyGridState,
+                    contentPadding = PaddingValues(horizontal = state.contentPadding.dp),
+                    horizontalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
+                    verticalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        header()
+                    }
+                    items(
+                        items = photos,
+                        key = { it.uri },
+                    ) { photo ->
+                        val bitmap = getOriginalImageByteArray(context, photo.uri)?.toBitmap()
+                        bitmap?.let {
+                            Card(
+                                shape = RoundedCornerShape(state.cornerSize.dp),
+                                modifier = Modifier.aspectRatio(1f),
+                                onClick = { onImageSelected(getOriginalImageByteArray(context, photo.uri)) },
+                            ) {
+                                Image(
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.clip(shape = RoundedCornerShape(state.cornerSize.dp)),
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
-    } else {
-        if (storagePermissionState.status.shouldShowRationale) {
-            Box(modifier = modifier) {
-                permissionDeniedContent()
-            }
         } else {
-            LaunchedEffect(Unit) {
-                storagePermissionState.launchPermissionRequest()
+            if (storagePermissionState.status.shouldShowRationale) {
+                permissionDeniedContent()
+            } else {
+                LaunchedEffect(Unit) {
+                    storagePermissionState.launchPermissionRequest()
+                }
             }
         }
     }

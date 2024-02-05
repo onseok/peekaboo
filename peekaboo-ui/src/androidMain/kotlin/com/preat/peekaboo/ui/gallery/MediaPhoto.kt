@@ -35,11 +35,15 @@ internal data class MediaPhoto(
 )
 
 @Composable
-internal fun rememberMediaPhotos(context: Context): List<MediaPhoto> {
+internal fun rememberMediaPhotos(
+    context: Context,
+    onPhotosLoaded: (Boolean) -> Unit,
+): List<MediaPhoto> {
     val photos = remember { mutableStateListOf<MediaPhoto>() }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(coroutineScope) {
+        onPhotosLoaded(false)
         withContext(Dispatchers.IO) {
             val projection =
                 arrayOf(
@@ -87,6 +91,7 @@ internal fun rememberMediaPhotos(context: Context): List<MediaPhoto> {
                 }
             }
         }
+        onPhotosLoaded(true)
     }
     return photos
 }
