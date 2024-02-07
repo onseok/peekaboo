@@ -60,14 +60,12 @@ internal object PeekabooImageResizer {
     private fun getImageSize(
         context: Context,
         uri: Uri,
-    ): Int {
-        val cursor = context.contentResolver.query(uri, null, null, null, null)
-        val sizeIndex = cursor?.getColumnIndex(OpenableColumns.SIZE)
-        cursor?.moveToFirst()
-        val size = sizeIndex?.let { cursor.getInt(it) } ?: 0
-        cursor?.close()
-        return size
-    }
+    ): Int =
+        context.contentResolver.query(uri, null, null, null, null).use { cursor ->
+            val sizeIndex = cursor?.getColumnIndex(OpenableColumns.SIZE)
+            cursor?.moveToFirst()
+            sizeIndex?.let { cursor.getInt(it) } ?: 0
+        }
 
     private fun getOriginalImageByteArray(
         context: Context,
@@ -116,9 +114,10 @@ internal object PeekabooImageResizer {
                     options.inSampleSize = inSampleSize
 
                     context.contentResolver.openInputStream(uri)?.use { scaledInputStream ->
-                        BitmapFactory.decodeStream(scaledInputStream, null, options)?.also { bitmap ->
-                            PeekabooBitmapCache.instance.put(resizeCacheKey, bitmap)
-                        }
+                        BitmapFactory.decodeStream(scaledInputStream, null, options)
+                            ?.also { bitmap ->
+                                PeekabooBitmapCache.instance.put(resizeCacheKey, bitmap)
+                            }
                     }
                 }
             }
@@ -171,7 +170,11 @@ internal object PeekabooImageResizer {
                 colorFilter = ColorMatrixColorFilter(colorMatrix)
             }
 
-        return Bitmap.createBitmap(originalBitmap.width, originalBitmap.height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        return Bitmap.createBitmap(
+            originalBitmap.width,
+            originalBitmap.height,
+            Bitmap.Config.ARGB_8888,
+        ).also { bitmap ->
             val canvas = Canvas(bitmap)
             canvas.drawBitmap(originalBitmap, 0f, 0f, paint)
         }
@@ -184,7 +187,8 @@ internal object PeekabooImageResizer {
     ): Bitmap {
         val inputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
         val exif = ExifInterface(inputStream)
-        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val orientation =
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
 
         val matrix = Matrix()
         when (orientation) {
