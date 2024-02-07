@@ -60,11 +60,12 @@ internal object PeekabooImageResizer {
     private fun getImageSize(
         context: Context,
         uri: Uri,
-    ): Int = context.contentResolver.query(uri, null, null, null, null).use { cursor ->
-        val sizeIndex = cursor?.getColumnIndex(OpenableColumns.SIZE)
-        cursor?.moveToFirst()
-        sizeIndex?.let { cursor.getInt(it) } ?: 0
-    }
+    ): Int =
+        context.contentResolver.query(uri, null, null, null, null).use { cursor ->
+            val sizeIndex = cursor?.getColumnIndex(OpenableColumns.SIZE)
+            cursor?.moveToFirst()
+            sizeIndex?.let { cursor.getInt(it) } ?: 0
+        }
 
     private fun getOriginalImageByteArray(
         context: Context,
