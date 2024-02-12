@@ -27,21 +27,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,10 +47,17 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import app.cash.paging.compose.LazyPagingItems
+import app.cash.paging.compose.collectAsLazyPagingItems
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.preat.peekaboo.ui.gallery.model.PeekabooMediaImage
+import com.preat.peekaboo.ui.gallery.repository.PeekabooGalleryRepositoryImpl
+import com.preat.peekaboo.ui.gallery.viewmodel.PeekabooGalleryViewModel
+import com.preat.peekaboo.ui.gallery.viewmodel.PeekabooGalleryViewModelFactory
 import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
@@ -70,7 +74,6 @@ actual fun PeekabooGallery(
     onImageSelected: (ByteArray?) -> Unit,
 ) {
     val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(true) }
 
     val storagePermissionState =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -83,19 +86,24 @@ actual fun PeekabooGallery(
             )
         }
 
+    val peekabooGalleryViewModel: PeekabooGalleryViewModel =
+        viewModel(
+            factory =
+                PeekabooGalleryViewModelFactory(
+                    PeekabooGalleryRepositoryImpl(
+                        context,
+                    ),
+                ),
+        )
+
+    val lazyPeekabooGalleryImages: LazyPagingItems<PeekabooMediaImage> =
+        peekabooGalleryViewModel.getImages().collectAsLazyPagingItems()
+
     Box(modifier = modifier.background(backgroundColor)) {
         if (storagePermissionState.status.isGranted) {
-            val photos =
-                rememberMediaPhotos(
-                    context = context,
-                    onPhotosLoaded = { loaded ->
-                        isLoading = !loaded
-                    },
-                )
+            Column(modifier = modifier.background(backgroundColor)) {
+                header()
 
-            if (isLoading) {
-                progressIndicator()
-            } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(state.columns),
                     state = lazyGridState,
@@ -103,26 +111,34 @@ actual fun PeekabooGallery(
                     horizontalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
                     verticalArrangement = Arrangement.spacedBy(state.itemSpacing.dp),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        header()
-                    }
                     items(
-                        items = photos,
-                        key = { it.uri },
-                    ) { photo ->
-                        val bitmap = getOriginalImageByteArray(context, photo.uri)?.toBitmap()
-                        bitmap?.let {
-                            Card(
-                                shape = RoundedCornerShape(state.cornerSize.dp),
-                                modifier = Modifier.aspectRatio(1f),
-                                onClick = { onImageSelected(getOriginalImageByteArray(context, photo.uri)) },
-                            ) {
-                                Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.clip(shape = RoundedCornerShape(state.cornerSize.dp)),
-                                )
+                        count = lazyPeekabooGalleryImages.itemCount,
+                        key = { index ->
+                            lazyPeekabooGalleryImages.peek(index)?.id ?: index
+                        },
+                    ) { index ->
+                        lazyPeekabooGalleryImages[index]?.let { photo ->
+                            val bitmap = getOriginalImageByteArray(context, photo.uri)?.toBitmap()
+                            bitmap?.let {
+                                Card(
+                                    shape = RoundedCornerShape(state.cornerSize.dp),
+                                    modifier = Modifier.aspectRatio(1f),
+                                    onClick = {
+                                        onImageSelected(
+                                            getOriginalImageByteArray(
+                                                context,
+                                                photo.uri,
+                                            ),
+                                        )
+                                    },
+                                ) {
+                                    Image(
+                                        bitmap = it.asImageBitmap(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.clip(shape = RoundedCornerShape(state.cornerSize.dp)),
+                                    )
+                                }
                             }
                         }
                     }
