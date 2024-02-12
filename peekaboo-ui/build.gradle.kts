@@ -40,12 +40,15 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material)
             implementation(libs.components.resources)
+            implementation(libs.paging.common)
+            implementation(libs.paging.compose.common)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.accompanist.permissions)
             implementation(libs.camera.camera2)
             implementation(libs.camera.lifecycle)
