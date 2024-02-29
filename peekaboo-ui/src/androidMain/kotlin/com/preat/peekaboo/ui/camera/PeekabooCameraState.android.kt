@@ -3,7 +3,8 @@ package com.preat.peekaboo.ui.camera
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 
 actual class PeekabooCameraState(
@@ -41,6 +42,23 @@ actual class PeekabooCameraState(
         isCameraReady = true
     }
 
+    companion object {
+
+        fun saver(onCapture: (ByteArray?) -> Unit): Saver<PeekabooCameraState, Int> {
+            return Saver(
+                save = {
+                    it.cameraMode.id()
+                },
+                restore = {
+                    PeekabooCameraState(
+                        cameraMode = cameraModeFromId(it),
+                        onCapture = onCapture,
+                    )
+                },
+            )
+        }
+    }
+
 }
 
 @Composable
@@ -48,5 +66,8 @@ actual fun rememberPeekabooCameraState(
     initialCameraMode: CameraMode,
     onCapture: (ByteArray?) -> Unit,
 ): PeekabooCameraState {
-    return remember(onCapture) { PeekabooCameraState(initialCameraMode, onCapture) }
+    return rememberSaveable(
+        onCapture,
+        saver = PeekabooCameraState.saver(onCapture),
+    ) { PeekabooCameraState(initialCameraMode, onCapture) }
 }
