@@ -1,12 +1,14 @@
 package com.preat.peekaboo.ui.camera
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 
+@Stable
 actual class PeekabooCameraState(
     cameraMode: CameraMode,
     private val onCapture: (ByteArray?) -> Unit,

@@ -1,6 +1,7 @@
 package com.preat.peekaboo.ui.camera
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -21,6 +22,7 @@ expect fun rememberPeekabooCameraState(
 /**
  * State of [PeekabooCamera]. Contains states relating to camera control.
  */
+@Stable
 expect class PeekabooCameraState {
 
     var isCameraReady: Boolean
