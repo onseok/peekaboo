@@ -52,7 +52,6 @@ import kotlin.coroutines.suspendCoroutine
 
 private val executor = Executors.newSingleThreadExecutor()
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun PeekabooCamera(
     modifier: Modifier,
@@ -63,30 +62,35 @@ actual fun PeekabooCamera(
     onCapture: (byteArray: ByteArray?) -> Unit,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val cameraPermissionState =
-        rememberPermissionState(permission = android.Manifest.permission.CAMERA)
-    when (cameraPermissionState.status) {
-        PermissionStatus.Granted -> {
-            CameraWithGrantedPermission(
-                modifier = modifier,
-                cameraMode = cameraMode,
-                captureIcon = captureIcon,
-                convertIcon = convertIcon,
-                progressIndicator = progressIndicator,
-                onCapture = onCapture,
-            )
-        }
-        is PermissionStatus.Denied -> {
-            if (cameraPermissionState.status.shouldShowRationale) {
-                LaunchedEffect(Unit) {
-                    cameraPermissionState.launchPermissionRequest()
-                }
-            } else {
-                Box(modifier = modifier) {
-                    permissionDeniedContent()
-                }
-            }
-        }
+    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    Box(
+        modifier = modifier,
+    ) {
+        PeekabooCamera(
+            state = state,
+            modifier = modifier,
+        )
+        CompatOverlay(
+            state = state,
+            captureIcon = captureIcon,
+            convertIcon = convertIcon,
+            progressIndicator = progressIndicator,
+        )
+    }
+}
+
+@Composable
+private fun CompatOverlay(
+    state: PeekabooCameraState,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
+) {
+    Box {
+        captureIcon(state::capture)
+        convertIcon(state::toggleCamera)
+        if (state.isCapturing)
+            progressIndicator()
     }
 }
 

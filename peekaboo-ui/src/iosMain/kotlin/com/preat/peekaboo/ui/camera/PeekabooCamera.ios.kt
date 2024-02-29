@@ -175,54 +175,35 @@ actual fun PeekabooCamera(
     onCapture: (byteArray: ByteArray?) -> Unit,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
-    LaunchedEffect(Unit) {
-        when (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)) {
-            AVAuthorizationStatusAuthorized -> {
-                cameraAccess = CameraAccess.Authorized
-            }
-
-            AVAuthorizationStatusDenied, AVAuthorizationStatusRestricted -> {
-                cameraAccess = CameraAccess.Denied
-            }
-
-            AVAuthorizationStatusNotDetermined -> {
-                AVCaptureDevice.requestAccessForMediaType(
-                    mediaType = AVMediaTypeVideo,
-                ) { success ->
-                    cameraAccess = if (success) CameraAccess.Authorized else CameraAccess.Denied
-                }
-            }
-        }
-    }
+    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
     Box(
-        modifier =
-        modifier
-            .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Alignment.Center,
+        modifier = modifier,
     ) {
-        when (cameraAccess) {
-            CameraAccess.Undefined -> {
-                // Waiting for the user to accept permission
-            }
+        PeekabooCamera(
+            state = state,
+            modifier = modifier,
+        )
+        CompatOverlay(
+            state = state,
+            captureIcon = captureIcon,
+            convertIcon = convertIcon,
+            progressIndicator = progressIndicator,
+        )
+    }
+}
 
-            CameraAccess.Denied -> {
-                Box(modifier = modifier) {
-                    permissionDeniedContent()
-                }
-            }
-
-            CameraAccess.Authorized -> {
-                AuthorizedCamera(
-                    cameraMode = cameraMode,
-                    captureIcon = captureIcon,
-                    convertIcon = convertIcon,
-                    progressIndicator = progressIndicator,
-                    onCapture = onCapture,
-                )
-            }
-        }
+@Composable
+private fun CompatOverlay(
+    state: PeekabooCameraState,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
+) {
+    Box {
+        captureIcon(state::capture)
+        convertIcon(state::toggleCamera)
+        if (state.isCapturing)
+            progressIndicator()
     }
 }
 
