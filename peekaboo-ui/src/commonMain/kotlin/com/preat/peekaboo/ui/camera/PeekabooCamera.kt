@@ -47,3 +47,25 @@ expect fun PeekabooCamera(
     onCapture: (byteArray: ByteArray?) -> Unit,
     permissionDeniedContent: @Composable () -> Unit = {},
 )
+
+/**
+ * `PeekabooCamera` is a composable function that provides a customizable camera UI within a Compose Multiplatform application.
+ * It allows for the display of a camera preview, along with custom capture and convert buttons, and an optional progress indicator during photo capture.
+ *
+ * @param state The [PeekabooCameraState] to control camera.
+ * @param modifier The [Modifier] applied to the camera UI component for layout customization.
+ * @param permissionDeniedContent An optional composable lambda that provides content to be displayed when camera permission is denied.
+ *        This allows users to define a custom UI to inform or guide the user when camera access has been denied. The content can be
+ *        informative text, an image, a button to redirect the user to settings, or any other composable content. This lambda will be invoked
+ *        within the PeekabooCamera composable scope, replacing the camera preview with the user-defined UI.
+ *
+ * Note: If `permissionDeniedContent` is not used, and the camera permission is denied, PeekabooCamera will render an empty view. To avoid this,
+ * it's recommended to implement a separate permission check logic before rendering the PeekabooCamera composable. This way, you can ensure the
+ * camera permission is granted before the camera UI is displayed, or handle the permission denial appropriately outside of the PeekabooCamera scope.
+ */
+@Composable
+expect fun PeekabooCamera(
+    state: PeekabooCameraState,
+    modifier: Modifier,
+    permissionDeniedContent: @Composable () -> Unit = {},
+)

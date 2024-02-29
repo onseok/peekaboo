@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,6 +87,130 @@ actual fun PeekabooCamera(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+actual fun PeekabooCamera(
+    state: PeekabooCameraState,
+    modifier: Modifier,
+    permissionDeniedContent: @Composable () -> Unit,
+) {
+    val cameraPermissionState =
+        rememberPermissionState(permission = android.Manifest.permission.CAMERA)
+    when (cameraPermissionState.status) {
+        PermissionStatus.Granted -> {
+            CameraWithGrantedPermission(
+                state = state,
+                modifier = modifier,
+            )
+        }
+        is PermissionStatus.Denied -> {
+            if (cameraPermissionState.status.shouldShowRationale) {
+                LaunchedEffect(Unit) {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            } else {
+                Box(modifier = modifier) {
+                    permissionDeniedContent()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraWithGrantedPermission(
+    state: PeekabooCameraState,
+    modifier: Modifier,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }
+
+    val preview = Preview.Builder().build()
+    val previewView = remember { PreviewView(context) }
+    val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
+    val cameraSelector = remember(state.cameraMode) {
+        val lensFacing = when (state.cameraMode) {
+            CameraMode.Front -> {
+                CameraSelector.LENS_FACING_FRONT
+            }
+            CameraMode.Back -> {
+                CameraSelector.LENS_FACING_BACK
+            }
+        }
+        CameraSelector.Builder().requireLensFacing(lensFacing).build()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraProvider?.unbindAll()
+        }
+    }
+
+    LaunchedEffect(state.cameraMode) {
+        cameraProvider = suspendCoroutine<ProcessCameraProvider> { continuation ->
+            ProcessCameraProvider.getInstance(context).also { cameraProvider ->
+                cameraProvider.addListener(
+                    {
+                        continuation.resume(cameraProvider.get())
+                        state.onCameraReady()
+                    },
+                    executor,
+                )
+            }
+        }
+        cameraProvider?.unbindAll()
+        cameraProvider?.bindToLifecycle(
+            lifecycleOwner,
+            cameraSelector,
+            preview,
+            imageCapture,
+        )
+        preview.setSurfaceProvider(previewView.surfaceProvider)
+    }
+
+    SideEffect {
+        val triggerCapture = {
+            imageCapture.takePicture(
+                executor,
+                ImageCaptureCallback(state::onCapture, state::stopCapturing),
+            )
+        }
+        state.triggerCaptureAnchor = triggerCapture
+    }
+
+    DisposableEffect(state) {
+        onDispose {
+            state.triggerCaptureAnchor = null
+        }
+    }
+    AndroidView(
+        factory = { previewView },
+        modifier = modifier,
+    )
+}
+
+class ImageCaptureCallback(
+    private val onCapture: (byteArray: ByteArray?) -> Unit,
+    private val stopCapturing: () -> Unit,
+) : OnImageCapturedCallback() {
+    override fun onCaptureSuccess(image: ImageProxy) {
+        val rotationDegrees = image.imageInfo.rotationDegrees
+        val buffer = image.planes[0].buffer
+        val data = buffer.toByteArray()
+
+        // Rotate the image if necessary
+        val rotatedData = if (rotationDegrees != 0) {
+            rotateImage(data, rotationDegrees)
+        } else {
+            data
+        }
+        image.close()
+        onCapture(rotatedData)
+        stopCapturing()
     }
 }
 

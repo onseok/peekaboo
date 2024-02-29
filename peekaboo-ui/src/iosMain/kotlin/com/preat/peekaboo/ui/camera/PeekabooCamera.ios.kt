@@ -23,6 +23,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,6 +113,60 @@ private val deviceTypes =
 
 @Composable
 actual fun PeekabooCamera(
+    state: PeekabooCameraState,
+    modifier: Modifier,
+    permissionDeniedContent: @Composable () -> Unit,
+) {
+    var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
+    LaunchedEffect(Unit) {
+        when (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)) {
+            AVAuthorizationStatusAuthorized -> {
+                cameraAccess = CameraAccess.Authorized
+            }
+
+            AVAuthorizationStatusDenied, AVAuthorizationStatusRestricted -> {
+                cameraAccess = CameraAccess.Denied
+            }
+
+            AVAuthorizationStatusNotDetermined -> {
+                AVCaptureDevice.requestAccessForMediaType(
+                    mediaType = AVMediaTypeVideo,
+                ) { success ->
+                    cameraAccess = if (success) CameraAccess.Authorized else CameraAccess.Denied
+                }
+            }
+        }
+    }
+    Box(
+        modifier =
+        modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (cameraAccess) {
+            CameraAccess.Undefined -> {
+                // Waiting for the user to accept permission
+            }
+
+            CameraAccess.Denied -> {
+                Box(modifier = modifier) {
+                    permissionDeniedContent()
+                }
+            }
+
+            CameraAccess.Authorized -> {
+                AuthorizedCamera(
+                    state = state,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+actual fun PeekabooCamera(
     modifier: Modifier,
     cameraMode: CameraMode,
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
@@ -142,9 +197,9 @@ actual fun PeekabooCamera(
     }
     Box(
         modifier =
-            modifier
-                .fillMaxSize()
-                .background(Color.Black),
+        modifier
+            .fillMaxSize()
+            .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
         when (cameraAccess) {
@@ -186,10 +241,10 @@ private fun BoxScope.AuthorizedCamera(
                 deviceTypes = deviceTypes,
                 mediaType = AVMediaTypeVideo,
                 position =
-                    when (cameraMode) {
-                        CameraMode.Front -> AVCaptureDevicePositionFront
-                        CameraMode.Back -> AVCaptureDevicePositionBack
-                    },
+                when (cameraMode) {
+                    CameraMode.Front -> AVCaptureDevicePositionFront
+                    CameraMode.Back -> AVCaptureDevicePositionBack
+                },
             ).devices.firstOrNull() as? AVCaptureDevice
         }
 
@@ -203,15 +258,58 @@ private fun BoxScope.AuthorizedCamera(
             onCapture = onCapture,
         )
     } else {
-        Text("Camera is not available on simulator. Please try to run on a real iOS device.", color = Color.White)
+        Text(
+            "Camera is not available on simulator. Please try to run on a real iOS device.",
+            color = Color.White,
+        )
     }
 
     if (!cameraReady) {
         Box(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black),
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        )
+    }
+}
+
+@Composable
+private fun AuthorizedCamera(
+    state: PeekabooCameraState,
+    modifier: Modifier = Modifier,
+) {
+    val camera: AVCaptureDevice? =
+        remember {
+            discoverySessionWithDeviceTypes(
+                deviceTypes = deviceTypes,
+                mediaType = AVMediaTypeVideo,
+                position = when (state.cameraMode) {
+                    CameraMode.Front -> AVCaptureDevicePositionFront
+                    CameraMode.Back -> AVCaptureDevicePositionBack
+                },
+            ).devices.firstOrNull() as? AVCaptureDevice
+        }
+
+    if (camera != null) {
+        RealDeviceCamera(
+            state = state,
+            camera = camera,
+            modifier = modifier,
+        )
+    } else {
+        Text(
+            "Camera is not available on simulator. Please try to run on a real iOS device.",
+            color = Color.White,
+        )
+    }
+
+    if (!state.isCameraReady) {
+        Box(
+            modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
         )
     }
 }
@@ -378,9 +476,9 @@ private fun BoxScope.RealDeviceCamera(
         NSNotificationCenter.defaultCenter.addObserver(
             observer = listener,
             selector =
-                NSSelectorFromString(
-                    OrientationListener::orientationDidChange.name + ":",
-                ),
+            NSSelectorFromString(
+                OrientationListener::orientationDidChange.name + ":",
+            ),
             name = notificationName,
             `object` = null,
         )
@@ -402,7 +500,12 @@ private fun BoxScope.RealDeviceCamera(
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
             cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
             dispatch_group_enter(dispatchGroup)
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+            dispatch_async(
+                dispatch_get_global_queue(
+                    DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(),
+                    0UL,
+                ),
+            ) {
                 captureSession.startRunning()
                 dispatch_group_leave(dispatchGroup)
             }
@@ -424,6 +527,216 @@ private fun BoxScope.RealDeviceCamera(
     convertIcon(switchCamera)
     if (capturePhotoStarted) {
         progressIndicator()
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+private fun RealDeviceCamera(
+    state: PeekabooCameraState,
+    camera: AVCaptureDevice,
+    modifier: Modifier,
+) {
+    val capturePhotoOutput = remember { AVCapturePhotoOutput() }
+
+    val photoCaptureDelegate =
+        remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
+
+    val triggerCapture: () -> Unit = {
+        val photoSettings =
+            AVCapturePhotoSettings.photoSettingsWithFormat(
+                format = mapOf(pair = AVVideoCodecKey to AVVideoCodecTypeJPEG),
+            )
+        if (camera.position == AVCaptureDevicePositionFront) {
+            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+                ?.automaticallyAdjustsVideoMirroring = false
+            capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+                ?.videoMirrored = true
+        }
+        capturePhotoOutput.capturePhotoWithSettings(
+            settings = photoSettings,
+            delegate = photoCaptureDelegate,
+        )
+    }
+
+    SideEffect {
+        state.triggerCaptureAnchor = triggerCapture
+    }
+
+    val captureSession: AVCaptureSession =
+        remember {
+            AVCaptureSession().also { captureSession ->
+                captureSession.sessionPreset = AVCaptureSessionPresetPhoto
+                val captureDeviceInput: AVCaptureDeviceInput =
+                    deviceInputWithDevice(device = camera, error = null)!!
+                captureSession.addInput(captureDeviceInput)
+                captureSession.addOutput(capturePhotoOutput)
+            }
+        }
+
+    val cameraPreviewLayer =
+        remember {
+            AVCaptureVideoPreviewLayer(session = captureSession)
+        }
+
+    // Update captureSession with new camera configuration whenever isFrontCamera changed.
+    LaunchedEffect(state.cameraMode) {
+        val dispatchGroup = dispatch_group_create()
+        captureSession.beginConfiguration()
+        captureSession.inputs.forEach { captureSession.removeInput(it as AVCaptureInput) }
+
+        val newCamera =
+            discoverySessionWithDeviceTypes(
+                deviceTypes,
+                AVMediaTypeVideo,
+                if (state.cameraMode == CameraMode.Front) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack,
+            ).devices.firstOrNull() as? AVCaptureDevice
+
+        newCamera?.let {
+            val newInput =
+                AVCaptureDeviceInput.deviceInputWithDevice(it, error = null) as AVCaptureDeviceInput
+            if (captureSession.canAddInput(newInput)) {
+                captureSession.addInput(newInput)
+            }
+        }
+
+        dispatch_group_enter(dispatchGroup)
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+            captureSession.startRunning()
+            dispatch_group_leave(dispatchGroup)
+        }
+        captureSession.commitConfiguration()
+
+        dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+            state.onCameraReady()
+        }
+    }
+
+    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, state) {
+        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput)
+        val notificationName = platform.UIKit.UIDeviceOrientationDidChangeNotification
+        NSNotificationCenter.defaultCenter.addObserver(
+            observer = listener,
+            selector =
+            NSSelectorFromString(
+                OrientationListener::orientationDidChange.name + ":",
+            ),
+            name = notificationName,
+            `object` = null,
+        )
+        onDispose {
+            state.triggerCaptureAnchor = null
+            NSNotificationCenter.defaultCenter.removeObserver(
+                observer = listener,
+                name = notificationName,
+                `object` = null,
+            )
+        }
+    }
+
+    UIKitView(
+        modifier = modifier,
+        background = Color.Black,
+        factory = {
+            val dispatchGroup = dispatch_group_create()
+            val cameraContainer = UIView()
+            cameraContainer.layer.addSublayer(cameraPreviewLayer)
+            cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
+            dispatch_group_enter(dispatchGroup)
+            dispatch_async(
+                dispatch_get_global_queue(
+                    DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(),
+                    0UL,
+                ),
+            ) {
+                captureSession.startRunning()
+                dispatch_group_leave(dispatchGroup)
+            }
+            dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+                state.onCameraReady()
+            }
+            cameraContainer
+        },
+        onResize = { view: UIView, rect: CValue<CGRect> ->
+            CATransaction.begin()
+            CATransaction.setValue(true, kCATransactionDisableActions)
+            view.layer.setFrame(rect)
+            cameraPreviewLayer.setFrame(rect)
+            CATransaction.commit()
+        },
+    )
+}
+
+class OrientationListener(
+    private val cameraPreviewLayer: AVCaptureVideoPreviewLayer,
+    private val capturePhotoOutput: AVCapturePhotoOutput,
+) : NSObject() {
+    @OptIn(BetaInteropApi::class)
+    @Suppress("UNUSED_PARAMETER")
+    @ObjCAction
+    fun orientationDidChange(arg: NSNotification) {
+        val cameraConnection = cameraPreviewLayer.connection
+        val actualOrientation =
+            when (UIDevice.currentDevice.orientation) {
+                UIDeviceOrientation.UIDeviceOrientationPortrait ->
+                    AVCaptureVideoOrientationPortrait
+
+                UIDeviceOrientation.UIDeviceOrientationLandscapeLeft ->
+                    AVCaptureVideoOrientationLandscapeRight
+
+                UIDeviceOrientation.UIDeviceOrientationLandscapeRight ->
+                    AVCaptureVideoOrientationLandscapeLeft
+
+                UIDeviceOrientation.UIDeviceOrientationPortraitUpsideDown ->
+                    AVCaptureVideoOrientationPortrait
+
+                else -> cameraConnection?.videoOrientation ?: AVCaptureVideoOrientationPortrait
+            }
+        if (cameraConnection != null) {
+            cameraConnection.videoOrientation = actualOrientation
+        }
+        capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+            ?.videoOrientation = actualOrientation
+    }
+}
+
+class PhotoCaptureDelegate(
+    private val onCaptureEnd: () -> Unit,
+    private val onCapture: (byteArray: ByteArray?) -> Unit,
+) : NSObject(), AVCapturePhotoCaptureDelegateProtocol {
+
+    @OptIn(ExperimentalForeignApi::class)
+    override fun captureOutput(
+        output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto: AVCapturePhoto,
+        error: NSError?,
+    ) {
+        val photoData = didFinishProcessingPhoto.fileDataRepresentation()
+        if (photoData != null) {
+            var uiImage = UIImage(photoData)
+            if (uiImage.imageOrientation != UIImageOrientation.UIImageOrientationUp) {
+                UIGraphicsBeginImageContextWithOptions(
+                    uiImage.size,
+                    false,
+                    uiImage.scale,
+                )
+                uiImage.drawInRect(
+                    CGRectMake(
+                        x = 0.0,
+                        y = 0.0,
+                        width = uiImage.size.useContents { width },
+                        height = uiImage.size.useContents { height },
+                    ),
+                )
+                val normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+                UIGraphicsEndImageContext()
+                uiImage = normalizedImage!!
+            }
+            val imageData = UIImagePNGRepresentation(uiImage)
+            val byteArray: ByteArray? = imageData?.toByteArray()
+            onCapture(byteArray)
+        }
+        onCaptureEnd()
     }
 }
 
