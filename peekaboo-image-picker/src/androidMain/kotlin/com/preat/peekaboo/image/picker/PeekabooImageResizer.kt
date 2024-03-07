@@ -25,6 +25,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.annotation.FloatRange
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ internal object PeekabooImageResizer {
         width: Int,
         height: Int,
         resizeThresholdBytes: Long,
+        @FloatRange(from = 0.0, to = 1.0)
         compressionQuality: Double,
         filterOptions: FilterOptions,
         onResult: (ByteArray?) -> Unit,
@@ -87,6 +89,7 @@ internal object PeekabooImageResizer {
         uri: Uri,
         width: Int,
         height: Int,
+        @FloatRange(from = 0.0, to = 1.0)
         compression: Double,
         filterOptions: FilterOptions,
     ): ByteArray? {
@@ -129,7 +132,8 @@ internal object PeekabooImageResizer {
             val filteredBitmap = applyFilter(rotatedBitmap, filterOptions)
 
             ByteArrayOutputStream().use { byteArrayOutputStream ->
-                filteredBitmap.compress(Bitmap.CompressFormat.JPEG, (100 * compression).toInt(), byteArrayOutputStream)
+                val validatedCompression = compression.coerceIn(0.0, 1.0)
+                filteredBitmap.compress(Bitmap.CompressFormat.JPEG, (100 * validatedCompression).toInt(), byteArrayOutputStream)
                 val byteArray = byteArrayOutputStream.toByteArray()
                 PeekabooBitmapCache.instance.put(filterCacheKey, filteredBitmap)
                 return byteArray

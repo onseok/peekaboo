@@ -49,6 +49,7 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidx-lifecycleViewmodelCompose" }
 paging-common = { module = "app.cash.paging:paging-common", version.ref = "multiplatform-paging" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "multiplatform-paging" }
+annotation = { module = "androidx.annotation:annotation", version = "1.7.1" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
