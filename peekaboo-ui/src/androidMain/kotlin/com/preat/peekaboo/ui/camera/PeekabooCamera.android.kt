@@ -26,7 +26,6 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +33,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -215,117 +213,6 @@ class ImageCaptureCallback(
         image.close()
         onCapture(rotatedData)
         stopCapturing()
-    }
-}
-
-@Composable
-private fun CameraWithGrantedPermission(
-    modifier: Modifier,
-    cameraMode: CameraMode,
-    captureIcon: @Composable (() -> Unit) -> Unit,
-    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
-    progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray) -> Unit,
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }
-
-    val preview = Preview.Builder().build()
-    val previewView = remember { PreviewView(context) }
-    val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
-    var isFrontCamera by rememberSaveable {
-        mutableStateOf(
-            when (cameraMode) {
-                CameraMode.Front -> true
-                CameraMode.Back -> false
-            },
-        )
-    }
-    val cameraSelector =
-        remember(isFrontCamera) {
-            val lensFacing =
-                if (isFrontCamera) {
-                    CameraSelector.LENS_FACING_FRONT
-                } else {
-                    CameraSelector.LENS_FACING_BACK
-                }
-            CameraSelector.Builder()
-                .requireLensFacing(lensFacing)
-                .build()
-        }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            cameraProvider?.unbindAll()
-        }
-    }
-
-    LaunchedEffect(isFrontCamera) {
-        cameraProvider =
-            suspendCoroutine<ProcessCameraProvider> { continuation ->
-                ProcessCameraProvider.getInstance(context).also { cameraProvider ->
-                    cameraProvider.addListener(
-                        {
-                            continuation.resume(cameraProvider.get())
-                        },
-                        executor,
-                    )
-                }
-            }
-        cameraProvider?.unbindAll()
-        cameraProvider?.bindToLifecycle(
-            lifecycleOwner,
-            cameraSelector,
-            preview,
-            imageCapture,
-        )
-        preview.setSurfaceProvider(previewView.surfaceProvider)
-    }
-
-    var capturePhotoStarted by remember { mutableStateOf(false) }
-
-    val triggerCapture: () -> Unit = {
-        capturePhotoStarted = true
-        imageCapture.takePicture(
-            executor,
-            object : OnImageCapturedCallback() {
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    val rotationDegrees = image.imageInfo.rotationDegrees
-                    val buffer = image.planes[0].buffer
-                    val data = buffer.toByteArray()
-
-                    // Rotate the image if necessary
-                    val rotatedData =
-                        if (rotationDegrees != 0) {
-                            rotateImage(data, rotationDegrees)
-                        } else {
-                            data
-                        }
-
-                    image.close()
-                    onCapture(rotatedData)
-                    capturePhotoStarted = false
-                }
-            },
-        )
-    }
-
-    val toggleCamera: () -> Unit = {
-        isFrontCamera = !isFrontCamera
-    }
-
-    Box(modifier = modifier) {
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize(),
-        )
-        // Call the triggerCapture lambda when the capture button is clicked
-        captureIcon(triggerCapture)
-        convertIcon(toggleCamera)
-        if (capturePhotoStarted) {
-            progressIndicator()
-        }
     }
 }
 
