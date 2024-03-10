@@ -69,9 +69,7 @@ internal fun PeekabooCameraView(
 }
 
 @Composable
-fun PermissionDenied(
-    modifier: Modifier = Modifier,
-) {
+fun PermissionDenied(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.background(color = MaterialTheme.colors.background),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -104,9 +102,10 @@ private fun CameraOverlay(
     ) {
         IconButton(
             onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 16.dp, start = 16.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 16.dp, start = 16.dp),
         ) {
             Icon(
                 imageVector = IconClose,
@@ -114,28 +113,29 @@ private fun CameraOverlay(
                 tint = Color.White,
             )
         }
-        if (isCapturing)
+        if (isCapturing) {
             CircularProgressIndicator(
                 modifier =
-                Modifier
-                    .size(80.dp)
-                    .align(Alignment.Center),
+                    Modifier
+                        .size(80.dp)
+                        .align(Alignment.Center),
                 color = Color.White.copy(alpha = 0.7f),
                 strokeWidth = 8.dp,
             )
+        }
         CircularButton(
             imageVector = IconCached,
             modifier =
-            Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 16.dp, end = 16.dp),
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 16.dp),
             onClick = onConvert,
         )
         InstagramCameraButton(
             modifier =
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
             onClick = onCapture,
         )
     }

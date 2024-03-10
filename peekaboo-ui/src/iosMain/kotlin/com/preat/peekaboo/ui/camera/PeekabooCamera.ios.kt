@@ -139,9 +139,9 @@ actual fun PeekabooCamera(
     }
     Box(
         modifier =
-        modifier
-            .fillMaxSize()
-            .background(Color.Black),
+            modifier
+                .fillMaxSize()
+                .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
         when (cameraAccess) {
@@ -202,8 +202,9 @@ private fun CompatOverlay(
     Box {
         captureIcon(state::capture)
         convertIcon(state::toggleCamera)
-        if (state.isCapturing)
+        if (state.isCapturing) {
             progressIndicator()
+        }
     }
 }
 
@@ -222,10 +223,10 @@ private fun BoxScope.AuthorizedCamera(
                 deviceTypes = deviceTypes,
                 mediaType = AVMediaTypeVideo,
                 position =
-                when (cameraMode) {
-                    CameraMode.Front -> AVCaptureDevicePositionFront
-                    CameraMode.Back -> AVCaptureDevicePositionBack
-                },
+                    when (cameraMode) {
+                        CameraMode.Front -> AVCaptureDevicePositionFront
+                        CameraMode.Back -> AVCaptureDevicePositionBack
+                    },
             ).devices.firstOrNull() as? AVCaptureDevice
         }
 
@@ -248,9 +249,9 @@ private fun BoxScope.AuthorizedCamera(
     if (!cameraReady) {
         Box(
             modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black),
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
         )
     }
 }
@@ -265,10 +266,11 @@ private fun AuthorizedCamera(
             discoverySessionWithDeviceTypes(
                 deviceTypes = deviceTypes,
                 mediaType = AVMediaTypeVideo,
-                position = when (state.cameraMode) {
-                    CameraMode.Front -> AVCaptureDevicePositionFront
-                    CameraMode.Back -> AVCaptureDevicePositionBack
-                },
+                position =
+                    when (state.cameraMode) {
+                        CameraMode.Front -> AVCaptureDevicePositionFront
+                        CameraMode.Back -> AVCaptureDevicePositionBack
+                    },
             ).devices.firstOrNull() as? AVCaptureDevice
         }
 
@@ -288,9 +290,9 @@ private fun AuthorizedCamera(
     if (!state.isCameraReady) {
         Box(
             modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black),
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
         )
     }
 }
@@ -457,9 +459,9 @@ private fun BoxScope.RealDeviceCamera(
         NSNotificationCenter.defaultCenter.addObserver(
             observer = listener,
             selector =
-            NSSelectorFromString(
-                OrientationListener::orientationDidChange.name + ":",
-            ),
+                NSSelectorFromString(
+                    OrientationListener::orientationDidChange.name + ":",
+                ),
             name = notificationName,
             `object` = null,
         )
@@ -599,9 +601,9 @@ private fun RealDeviceCamera(
         NSNotificationCenter.defaultCenter.addObserver(
             observer = listener,
             selector =
-            NSSelectorFromString(
-                OrientationListener::orientationDidChange.name + ":",
-            ),
+                NSSelectorFromString(
+                    OrientationListener::orientationDidChange.name + ":",
+                ),
             name = notificationName,
             `object` = null,
         )
@@ -685,7 +687,6 @@ class PhotoCaptureDelegate(
     private val onCaptureEnd: () -> Unit,
     private val onCapture: (byteArray: ByteArray?) -> Unit,
 ) : NSObject(), AVCapturePhotoCaptureDelegateProtocol {
-
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
         output: AVCapturePhotoOutput,

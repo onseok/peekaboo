@@ -87,8 +87,9 @@ private fun CompatOverlay(
     Box {
         captureIcon(state::capture)
         convertIcon(state::toggleCamera)
-        if (state.isCapturing)
+        if (state.isCapturing) {
             progressIndicator()
+        }
     }
 }
 
@@ -134,17 +135,19 @@ private fun CameraWithGrantedPermission(
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
-    val cameraSelector = remember(state.cameraMode) {
-        val lensFacing = when (state.cameraMode) {
-            CameraMode.Front -> {
-                CameraSelector.LENS_FACING_FRONT
-            }
-            CameraMode.Back -> {
-                CameraSelector.LENS_FACING_BACK
-            }
+    val cameraSelector =
+        remember(state.cameraMode) {
+            val lensFacing =
+                when (state.cameraMode) {
+                    CameraMode.Front -> {
+                        CameraSelector.LENS_FACING_FRONT
+                    }
+                    CameraMode.Back -> {
+                        CameraSelector.LENS_FACING_BACK
+                    }
+                }
+            CameraSelector.Builder().requireLensFacing(lensFacing).build()
         }
-        CameraSelector.Builder().requireLensFacing(lensFacing).build()
-    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -153,17 +156,18 @@ private fun CameraWithGrantedPermission(
     }
 
     LaunchedEffect(state.cameraMode) {
-        cameraProvider = suspendCoroutine<ProcessCameraProvider> { continuation ->
-            ProcessCameraProvider.getInstance(context).also { cameraProvider ->
-                cameraProvider.addListener(
-                    {
-                        continuation.resume(cameraProvider.get())
-                        state.onCameraReady()
-                    },
-                    executor,
-                )
+        cameraProvider =
+            suspendCoroutine<ProcessCameraProvider> { continuation ->
+                ProcessCameraProvider.getInstance(context).also { cameraProvider ->
+                    cameraProvider.addListener(
+                        {
+                            continuation.resume(cameraProvider.get())
+                            state.onCameraReady()
+                        },
+                        executor,
+                    )
+                }
             }
-        }
         cameraProvider?.unbindAll()
         cameraProvider?.bindToLifecycle(
             lifecycleOwner,
@@ -205,11 +209,12 @@ class ImageCaptureCallback(
         val data = buffer.toByteArray()
 
         // Rotate the image if necessary
-        val rotatedData = if (rotationDegrees != 0) {
-            rotateImage(data, rotationDegrees)
-        } else {
-            data
-        }
+        val rotatedData =
+            if (rotationDegrees != 0) {
+                rotateImage(data, rotationDegrees)
+            } else {
+                data
+            }
         image.close()
         onCapture(rotatedData)
         stopCapturing()

@@ -35,7 +35,6 @@ sealed class CameraMode {
     data object Back : CameraMode()
 }
 
-
 internal fun CameraMode.inverse(): CameraMode {
     return when (this) {
         CameraMode.Back -> CameraMode.Front
@@ -54,6 +53,6 @@ internal fun cameraModeFromId(id: Int): CameraMode {
     return when (id) {
         0 -> CameraMode.Back
         1 -> CameraMode.Front
-        else -> throw IllegalArgumentException("CameraMode with id=${id} does not exists")
+        else -> throw IllegalArgumentException("CameraMode with id=$id does not exists")
     }
 }
