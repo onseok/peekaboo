@@ -8,6 +8,7 @@ compose-foundation = "1.5.4"
 compose-material3 = "1.1.2"
 androidx-activityCompose = "1.8.2"
 androidx-lifecycleViewmodelCompose = "2.7.0"
+androidx-version = "1.7.1"
 nexus-publish = "2.0.0-rc-1"
 spotless = "6.25.0"
 ktlint = "1.0.1"
@@ -49,6 +50,7 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidx-lifecycleViewmodelCompose" }
 paging-common = { module = "app.cash.paging:paging-common", version.ref = "multiplatform-paging" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "multiplatform-paging" }
+annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-version" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

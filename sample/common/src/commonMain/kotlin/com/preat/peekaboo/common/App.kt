@@ -78,7 +78,7 @@ fun App() {
             selectionMode = SelectionMode.Multiple(maxSelection = 5),
             scope = scope,
             // Resize options are customizable. Default is set to 800 x 800 pixels.
-            resizeOptions = ResizeOptions(width = 1200, height = 1200),
+            resizeOptions = ResizeOptions(width = 1200, height = 1200, compressionQuality = 1.0),
             // Default is 'Default', which applies no filter.
             // Other available options: GrayScale, Sepia, Invert.
             filterOptions = FilterOptions.GrayScale,
