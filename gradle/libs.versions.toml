@@ -9,7 +9,7 @@ compose-material3 = "1.2.0"
 androidx-activityCompose = "1.8.2"
 androidx-lifecycleViewmodelCompose = "2.7.0"
 androidx-annotation = "1.7.1"
-nexus-publish = "2.0.0-rc-1"
+nexus-publish = "2.0.0-rc-2"
 spotless = "6.25.0"
 ktlint = "1.0.1"
 
