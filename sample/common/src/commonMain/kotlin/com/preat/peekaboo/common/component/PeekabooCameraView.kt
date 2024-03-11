@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.preat.peekaboo.common.icon.IconCached
 import com.preat.peekaboo.common.icon.IconClose
 import com.preat.peekaboo.common.icon.IconWarning
-import com.preat.peekaboo.ui.camera.CameraMode
 import com.preat.peekaboo.ui.camera.PeekabooCamera
+import com.preat.peekaboo.ui.camera.rememberPeekabooCameraState
 
 @Composable
 internal fun PeekabooCameraView(
@@ -47,63 +47,59 @@ internal fun PeekabooCameraView(
     onCapture: (ByteArray?) -> Unit,
     onBack: () -> Unit,
 ) {
+    val state = rememberPeekabooCameraState(onCapture = onCapture)
     Box(modifier = modifier) {
         PeekabooCamera(
+            state = state,
             modifier = Modifier.fillMaxSize(),
-            cameraMode = CameraMode.Back,
-            captureIcon = { onClick ->
-                InstagramCameraButton(
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 16.dp),
-                    onClick = onClick,
-                )
-            },
-            convertIcon = { onClick ->
-                CircularButton(
-                    imageVector = IconCached,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(bottom = 16.dp, end = 16.dp),
-                    onClick = onClick,
-                )
-            },
-            progressIndicator = {
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier
-                            .size(80.dp)
-                            .align(Alignment.Center),
-                    color = Color.White.copy(alpha = 0.7f),
-                    strokeWidth = 8.dp,
-                )
-            },
-            onCapture = onCapture,
             permissionDeniedContent = {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(color = MaterialTheme.colors.background),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(
-                        imageVector = IconWarning,
-                        contentDescription = "Warning Icon",
-                        tint = MaterialTheme.colors.onBackground,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Please grant the camera permission!",
-                        color = MaterialTheme.colors.onBackground,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                PermissionDenied(
+                    modifier = Modifier.fillMaxSize(),
+                )
             },
         )
+        CameraOverlay(
+            isCapturing = state.isCapturing,
+            onBack = onBack,
+            onCapture = { state.capture() },
+            onConvert = { state.toggleCamera() },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+fun PermissionDenied(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.background(color = MaterialTheme.colors.background),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = IconWarning,
+            contentDescription = "Warning Icon",
+            tint = MaterialTheme.colors.onBackground,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Please grant the camera permission!",
+            color = MaterialTheme.colors.onBackground,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun CameraOverlay(
+    isCapturing: Boolean,
+    onCapture: () -> Unit,
+    onConvert: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier,
+    ) {
         IconButton(
             onClick = onBack,
             modifier =
@@ -117,5 +113,30 @@ internal fun PeekabooCameraView(
                 tint = Color.White,
             )
         }
+        if (isCapturing) {
+            CircularProgressIndicator(
+                modifier =
+                    Modifier
+                        .size(80.dp)
+                        .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 8.dp,
+            )
+        }
+        CircularButton(
+            imageVector = IconCached,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 16.dp),
+            onClick = onConvert,
+        )
+        InstagramCameraButton(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
+            onClick = onCapture,
+        )
     }
 }

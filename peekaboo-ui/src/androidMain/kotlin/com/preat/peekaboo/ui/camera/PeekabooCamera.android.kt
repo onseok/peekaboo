@@ -26,14 +26,13 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -51,7 +50,6 @@ import kotlin.coroutines.suspendCoroutine
 
 private val executor = Executors.newSingleThreadExecutor()
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 actual fun PeekabooCamera(
     modifier: Modifier,
@@ -62,17 +60,53 @@ actual fun PeekabooCamera(
     onCapture: (byteArray: ByteArray?) -> Unit,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
+    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    Box(
+        modifier = modifier,
+    ) {
+        PeekabooCamera(
+            state = state,
+            modifier = modifier,
+        )
+        CompatOverlay(
+            state = state,
+            captureIcon = captureIcon,
+            convertIcon = convertIcon,
+            progressIndicator = progressIndicator,
+        )
+    }
+}
+
+@Composable
+private fun CompatOverlay(
+    state: PeekabooCameraState,
+    captureIcon: @Composable (onClick: () -> Unit) -> Unit,
+    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
+    progressIndicator: @Composable () -> Unit,
+) {
+    Box {
+        captureIcon(state::capture)
+        convertIcon(state::toggleCamera)
+        if (state.isCapturing) {
+            progressIndicator()
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+actual fun PeekabooCamera(
+    state: PeekabooCameraState,
+    modifier: Modifier,
+    permissionDeniedContent: @Composable () -> Unit,
+) {
     val cameraPermissionState =
         rememberPermissionState(permission = android.Manifest.permission.CAMERA)
     when (cameraPermissionState.status) {
         PermissionStatus.Granted -> {
             CameraWithGrantedPermission(
+                state = state,
                 modifier = modifier,
-                cameraMode = cameraMode,
-                captureIcon = captureIcon,
-                convertIcon = convertIcon,
-                progressIndicator = progressIndicator,
-                onCapture = onCapture,
             )
         }
         is PermissionStatus.Denied -> {
@@ -91,12 +125,8 @@ actual fun PeekabooCamera(
 
 @Composable
 private fun CameraWithGrantedPermission(
+    state: PeekabooCameraState,
     modifier: Modifier,
-    cameraMode: CameraMode,
-    captureIcon: @Composable (() -> Unit) -> Unit,
-    convertIcon: @Composable (onClick: () -> Unit) -> Unit,
-    progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -105,25 +135,18 @@ private fun CameraWithGrantedPermission(
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
-    var isFrontCamera by rememberSaveable {
-        mutableStateOf(
-            when (cameraMode) {
-                CameraMode.Front -> true
-                CameraMode.Back -> false
-            },
-        )
-    }
     val cameraSelector =
-        remember(isFrontCamera) {
+        remember(state.cameraMode) {
             val lensFacing =
-                if (isFrontCamera) {
-                    CameraSelector.LENS_FACING_FRONT
-                } else {
-                    CameraSelector.LENS_FACING_BACK
+                when (state.cameraMode) {
+                    CameraMode.Front -> {
+                        CameraSelector.LENS_FACING_FRONT
+                    }
+                    CameraMode.Back -> {
+                        CameraSelector.LENS_FACING_BACK
+                    }
                 }
-            CameraSelector.Builder()
-                .requireLensFacing(lensFacing)
-                .build()
+            CameraSelector.Builder().requireLensFacing(lensFacing).build()
         }
 
     DisposableEffect(Unit) {
@@ -132,13 +155,14 @@ private fun CameraWithGrantedPermission(
         }
     }
 
-    LaunchedEffect(isFrontCamera) {
+    LaunchedEffect(state.cameraMode) {
         cameraProvider =
             suspendCoroutine<ProcessCameraProvider> { continuation ->
                 ProcessCameraProvider.getInstance(context).also { cameraProvider ->
                     cameraProvider.addListener(
                         {
                             continuation.resume(cameraProvider.get())
+                            state.onCameraReady()
                         },
                         executor,
                     )
@@ -154,49 +178,46 @@ private fun CameraWithGrantedPermission(
         preview.setSurfaceProvider(previewView.surfaceProvider)
     }
 
-    var capturePhotoStarted by remember { mutableStateOf(false) }
-
-    val triggerCapture: () -> Unit = {
-        capturePhotoStarted = true
-        imageCapture.takePicture(
-            executor,
-            object : OnImageCapturedCallback() {
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    val rotationDegrees = image.imageInfo.rotationDegrees
-                    val buffer = image.planes[0].buffer
-                    val data = buffer.toByteArray()
-
-                    // Rotate the image if necessary
-                    val rotatedData =
-                        if (rotationDegrees != 0) {
-                            rotateImage(data, rotationDegrees)
-                        } else {
-                            data
-                        }
-
-                    image.close()
-                    onCapture(rotatedData)
-                    capturePhotoStarted = false
-                }
-            },
-        )
-    }
-
-    val toggleCamera: () -> Unit = {
-        isFrontCamera = !isFrontCamera
-    }
-
-    Box(modifier = modifier) {
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize(),
-        )
-        // Call the triggerCapture lambda when the capture button is clicked
-        captureIcon(triggerCapture)
-        convertIcon(toggleCamera)
-        if (capturePhotoStarted) {
-            progressIndicator()
+    SideEffect {
+        val triggerCapture = {
+            imageCapture.takePicture(
+                executor,
+                ImageCaptureCallback(state::onCapture, state::stopCapturing),
+            )
         }
+        state.triggerCaptureAnchor = triggerCapture
+    }
+
+    DisposableEffect(state) {
+        onDispose {
+            state.triggerCaptureAnchor = null
+        }
+    }
+    AndroidView(
+        factory = { previewView },
+        modifier = modifier,
+    )
+}
+
+class ImageCaptureCallback(
+    private val onCapture: (byteArray: ByteArray?) -> Unit,
+    private val stopCapturing: () -> Unit,
+) : OnImageCapturedCallback() {
+    override fun onCaptureSuccess(image: ImageProxy) {
+        val rotationDegrees = image.imageInfo.rotationDegrees
+        val buffer = image.planes[0].buffer
+        val data = buffer.toByteArray()
+
+        // Rotate the image if necessary
+        val rotatedData =
+            if (rotationDegrees != 0) {
+                rotateImage(data, rotationDegrees)
+            } else {
+                data
+            }
+        image.close()
+        onCapture(rotatedData)
+        stopCapturing()
     }
 }
 

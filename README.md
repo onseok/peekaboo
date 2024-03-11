@@ -90,33 +90,61 @@ Here's the key-value pair you should add to your `Info.plist`:
 ### Custimizable Camera UI
 `PeekabooCamera` is a `composable` function that provides a customizable camera UI within a `Compose Multiplatform` application.
 
+### Simple Camera UI
+
 ```kotlin
 @Composable
 fun CustomCameraView() {
+    val state = rememberPeekabooCameraState(onCapture = { /* Handle captured images */ })
     PeekabooCamera(
+        state = state,
         modifier = Modifier.fillMaxSize(),
-        cameraMode = CameraMode.Back, // or CameraMode.Front
-        captureIcon = { onClick -> /* Custom Capture Button UI */ },
-        convertIcon = { onClick -> /* Custom Convert Button UI */ },
-        progressIndicator = { /* Custom Progress Indicator UI */ },
-        onCapture = { byteArray ->
-            // Handle the captured image
-        },
         permissionDeniedContent = {
             // Custom UI content for permission denied scenario
-        }
+        },
     )
 }
 ```
-- **`cameraMode`** : The initial camera mode (front or back). Default is `CameraMode.Back`.
-- **`captureIcon`** : A `composable` lambda for the capture button. It takes an `onClick` lambda that triggers the image capture process.
-- **`convertIcon`** : An optional `composable` lambda for a button to toggle the camera mode (front or back). It takes an `onClick` lambda for switching the camera.
-- **`progressIndicator`** : An optional `composable` lambda displayed during photo capture processing.
-- **`onCapture`** : A lambda called when a photo is captured, providing the photo as a `ByteArray` or `null` if the capture fails.
+
+### Camera UI with overlay
+
+```kotlin
+@Composable
+fun CustomCameraView() {
+    val state = rememberPeekabooCameraState(onCapture = { /* Handle captured images */ })
+    Box(modifier = Modifier.fillMaxSize()) {
+        PeekabooCamera(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            permissionDeniedContent = {
+                // Custom UI content for permission denied scenario
+            },
+        )
+        // Draw here UI you need with provided state
+        YourCameraOverlay(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+```
+- **`state`** : The `PeekabooCameraState` to control camera.
 - **`permissionDeniedContent`** : An optional `composable` lambda that provides content to be displayed when camera permission is denied. This allows users to define a custom UI to inform or guide the user when camera access has been denied. The content can be informative text, an image, a button to redirect the user to settings, or any other `composable` content. This lambda will be invoked within the `PeekabooCamera` composable scope, replacing the camera preview with the user-defined UI.
 
+### Camera state
 
-> 💡 **Note**: It's recommended to handle camera permission checks before rendering `PeekabooCamera`. This preemptive check ensures the camera UI is displayed only when permissions are granted, avoiding empty views or unexpected user experiences.
+```kotlin
+rememberPeekabooCameraState(
+    initialCameraMode: CameraMode = CameraMode.Back,
+    onCapture: (ByteArray?) -> Unit,
+)
+```
+- **`initialCameraMode`** : The initial camera mode (front or back). Default is [CameraMode.Back]. Changes does not affect state. To toggle use [PeekabooCameraState.toggleCamera]
+- **`onCapture`** : A lambda called when a photo is captured, providing the photo as a ByteArray or null if the capture fails.
+- **`PeekabooCameraState.isCameraReady`** : True if camera already available for show
+- **`PeekabooCameraState.isCapturing`** : True if camera is in progress of capture
+- **`PeekabooCameraState.cameraMode`** : Current camera mode (front or back)
+
 
 #### Capturing an Image from Camera
 | Android                                                         | iOS                                                     |
