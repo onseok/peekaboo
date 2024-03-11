@@ -19,7 +19,7 @@ plugins {
 
 allprojects {
     group = "io.github.onseok"
-    version = "0.4.3"
+    version = "0.5.0"
 }
 
 nexusPublishing {
