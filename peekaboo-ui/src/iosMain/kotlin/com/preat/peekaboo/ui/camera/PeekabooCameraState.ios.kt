@@ -41,6 +41,8 @@ actual class PeekabooCameraState(
     }
 
     actual fun capture() {
+        isCapturing = true
+        triggerCaptureAnchor?.invoke()
     }
 
     internal fun stopCapturing() {
