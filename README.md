@@ -47,7 +47,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.4.3"
+peekaboo = "0.5.0"
 
 [libraries]
 peekaboo-ui = { module = "io.github.onseok:peekaboo-ui", version.ref = "peekaboo" }
@@ -237,16 +237,17 @@ This feature allows you to resize the selected images to specific dimensions, op
 
 - The default resizing dimensions are set to `800 x 800` pixels.
 - The default threshold for resizing is set to `1MB`, meaning images larger than this size will be resized.
-- You can customize the resizing dimensions and threshold according to your needs.
+- You can customize the resizing **dimensions**, **threshold**, and now the **compression quality** according to your needs.
 
 ### Usage
-Set the `resizeOptions` parameter in `rememberImagePickerLauncher` with your desired dimensions and threshold:
+Set the `resizeOptions` parameter in `rememberImagePickerLauncher` with your desired dimensions, threshold and compression quality:
 
 ```kotlin
 val resizeOptions = ResizeOptions(
     width = 1200, // Custom width
     height = 1200, // Custom height
-    resizeThresholdBytes = 2 * 1024 * 1024L // Custom threshold for 2MB
+    resizeThresholdBytes = 2 * 1024 * 1024L, // Custom threshold for 2MB,
+    compressionQuality = 0.5 // Adjust compression quality (0.0 to 1.0)
 )
 ```
 
@@ -337,7 +338,7 @@ Support it by joining __[stargazers](https://github.com/onseok/peekaboo/stargaze
 ## License
 
 ```
-Copyright 2023 onseok
+Copyright 2024 onseok
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
