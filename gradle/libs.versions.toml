@@ -1,14 +1,14 @@
 [versions]
-agp = "8.2.2"
+agp = "8.3.0"
 kotlin = "1.9.22"
-compose = "1.5.12"
+compose = "1.6.0"
 compose-compiler = "1.5.8"
-compose-ui = "1.5.4"
-compose-foundation = "1.5.4"
-compose-material3 = "1.1.2"
+compose-ui = "1.6.1"
+compose-foundation = "1.6.1"
+compose-material3 = "1.2.0"
 androidx-activityCompose = "1.8.2"
 androidx-lifecycleViewmodelCompose = "2.7.0"
-androidx-version = "1.7.1"
+androidx-annotation = "1.7.1"
 nexus-publish = "2.0.0-rc-1"
 spotless = "6.25.0"
 ktlint = "1.0.1"
@@ -29,6 +29,10 @@ multiplatform-paging = "3.3.0-alpha02-0.4.0"
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidx-lifecycleViewmodelCompose" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose-ui" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose-ui" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose-ui" }
@@ -38,7 +42,6 @@ components-resources = { group = "org.jetbrains.compose.components", name = "com
 nexus-publish = { module = "io.github.gradle-nexus.publish-plugin:io.github.gradle-nexus.publish-plugin.gradle.plugin", version.ref = "nexus-publish" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
@@ -46,11 +49,8 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
-androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
-androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidx-lifecycleViewmodelCompose" }
 paging-common = { module = "app.cash.paging:paging-common", version.ref = "multiplatform-paging" }
 paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "multiplatform-paging" }
-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-version" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
