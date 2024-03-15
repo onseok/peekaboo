@@ -39,6 +39,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
+            implementation(libs.androidx.annotation)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

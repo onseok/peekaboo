@@ -35,13 +35,13 @@ allprojects {
         kotlin {
             target("**/*.kt")
             targetExclude("**/build/")
-            ktlint(libs.versions.ktlint.get())
+            ktlint().setEditorConfigPath("${project.rootDir}/.editorconfig")
             licenseHeaderFile(rootProject.file("spotless/copyright.txt"))
         }
         kotlinGradle {
             target("**/*.gradle.kts")
             targetExclude("**/build/")
-            ktlint(libs.versions.ktlint.get())
+            ktlint().setEditorConfigPath("${project.rootDir}/.editorconfig")
             licenseHeaderFile(rootProject.file("spotless/copyright.txt"), "(^(?![\\/ ]\\*).*$)")
         }
     }

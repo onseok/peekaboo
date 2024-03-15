@@ -15,8 +15,13 @@
  */
 package com.preat.peekaboo.image.picker
 
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
+
+private const val DEFAULT_RESIZE_IMAGE_WIDTH = 800
+private const val DEFAULT_RESIZE_IMAGE_HEIGHT = 800
+private const val DEFAULT_RESIZE_THRESHOLD_BYTES = 1048576L // 1MB
 
 @Composable
 expect fun rememberImagePickerLauncher(
@@ -38,8 +43,11 @@ sealed class SelectionMode {
 }
 
 data class ResizeOptions(
-    val width: Int = 800,
-    val height: Int = 800,
+    val width: Int = DEFAULT_RESIZE_IMAGE_WIDTH,
+    val height: Int = DEFAULT_RESIZE_IMAGE_HEIGHT,
+    val resizeThresholdBytes: Long = DEFAULT_RESIZE_THRESHOLD_BYTES,
+    @FloatRange(from = 0.0, to = 1.0)
+    val compressionQuality: Double = 1.0,
 )
 
 sealed interface FilterOptions {

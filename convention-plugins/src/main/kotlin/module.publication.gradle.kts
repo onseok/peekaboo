@@ -41,7 +41,7 @@ publishing {
                     "designed for seamless integration of an image picker feature in iOS " +
                     "and Android applications.",
             )
-            url.set("https://github.com/TEAM-PREAT/peekaboo")
+            url.set("https://github.com/onseok/peekaboo")
 
             licenses {
                 license {
@@ -58,11 +58,11 @@ publishing {
             }
             issueManagement {
                 system.set("Github")
-                url.set("https://github.com/TEAM-PREAT/peekaboo/issues")
+                url.set("https://github.com/onseok/peekaboo/issues")
             }
             scm {
-                connection.set("https://github.com/TEAM-PREAT/peekaboo.git")
-                url.set("https://github.com/TEAM-PREAT/peekaboo")
+                connection.set("https://github.com/onseok/peekaboo.git")
+                url.set("https://github.com/onseok/peekaboo")
             }
         }
     }

@@ -15,6 +15,7 @@
  */
 package com.preat.peekaboo.image.picker
 
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.CValue
@@ -85,9 +86,11 @@ actual fun rememberImagePickerLauncher(
                                     image?.fitInto(
                                         resizeOptions.width,
                                         resizeOptions.height,
+                                        resizeOptions.resizeThresholdBytes,
+                                        resizeOptions.compressionQuality,
                                         filterOptions,
                                     )
-                                val bytes = resizedImage?.toByteArray()
+                                val bytes = resizedImage?.toByteArray(resizeOptions.compressionQuality)
                                 if (bytes != null) {
                                     imageData.add(bytes)
                                 }
@@ -121,8 +124,9 @@ actual fun rememberImagePickerLauncher(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun UIImage.toByteArray(): ByteArray {
-    val jpegData = UIImageJPEGRepresentation(this, 1.0)!!
+private fun UIImage.toByteArray(compressionQuality: Double): ByteArray {
+    val validCompressionQuality = compressionQuality.coerceIn(0.0, 1.0)
+    val jpegData = UIImageJPEGRepresentation(this, validCompressionQuality)!!
     return ByteArray(jpegData.length.toInt()).apply {
         memcpy(this.refTo(0), jpegData.bytes, jpegData.length)
     }
@@ -132,27 +136,35 @@ private fun UIImage.toByteArray(): ByteArray {
 private fun UIImage.fitInto(
     maxWidth: Int,
     maxHeight: Int,
+    resizeThresholdBytes: Long,
+    @FloatRange(from = 0.0, to = 1.0)
+    compressionQuality: Double,
     filterOptions: FilterOptions,
 ): UIImage {
-    val originalWidth = this.size.useContents { width }
-    val originalHeight = this.size.useContents { height }
-    val originalRatio = originalWidth / originalHeight
+    val imageData = this.toByteArray(compressionQuality)
+    if (imageData.size > resizeThresholdBytes) {
+        val originalWidth = this.size.useContents { width }
+        val originalHeight = this.size.useContents { height }
+        val originalRatio = originalWidth / originalHeight
 
-    val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
-    val scale =
-        if (originalRatio > targetRatio) {
-            maxWidth.toDouble() / originalWidth
-        } else {
-            maxHeight.toDouble() / originalHeight
-        }
+        val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
+        val scale =
+            if (originalRatio > targetRatio) {
+                maxWidth.toDouble() / originalWidth
+            } else {
+                maxHeight.toDouble() / originalHeight
+            }
 
-    val newWidth = originalWidth * scale
-    val newHeight = originalHeight * scale
+        val newWidth = originalWidth * scale
+        val newHeight = originalHeight * scale
 
-    val targetSize = CGSizeMake(newWidth, newHeight)
-    val resizedImage = this.resize(targetSize)
+        val targetSize = CGSizeMake(newWidth, newHeight)
+        val resizedImage = this.resize(targetSize)
 
-    return applyFilterToUIImage(resizedImage, filterOptions)
+        return applyFilterToUIImage(resizedImage, filterOptions)
+    } else {
+        return applyFilterToUIImage(this, filterOptions)
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class)

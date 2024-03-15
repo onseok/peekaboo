@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.preat.peekaboo.common.style.PeekabooColors
 
-@Suppress("FunctionName")
 @Composable
 fun CircularButton(
     content: @Composable () -> Unit,
@@ -56,7 +55,6 @@ fun CircularButton(
     }
 }
 
-@Suppress("FunctionName")
 @Composable
 fun CircularButton(
     imageVector: ImageVector,
