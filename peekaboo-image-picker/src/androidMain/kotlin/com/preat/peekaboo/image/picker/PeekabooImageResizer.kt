@@ -204,7 +204,6 @@ internal object PeekabooImageResizer {
             ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.preScale(-1.0f, 1.0f)
             ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
                 matrix.preScale(1.0f, -1.0f)
-                matrix.postRotate(180f)
             }
             ExifInterface.ORIENTATION_TRANSPOSE -> {
                 matrix.preScale(-1.0f, 1.0f)
