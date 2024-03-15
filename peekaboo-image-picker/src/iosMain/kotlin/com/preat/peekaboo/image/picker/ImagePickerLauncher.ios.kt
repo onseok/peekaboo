@@ -163,7 +163,7 @@ private fun UIImage.fitInto(
 
         return applyFilterToUIImage(resizedImage, filterOptions)
     } else {
-        return this
+        return applyFilterToUIImage(this, filterOptions)
     }
 }
 
