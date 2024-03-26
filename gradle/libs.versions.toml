@@ -1,6 +1,7 @@
 [versions]
 agp = "8.3.1"
 kotlin = "1.9.23"
+kotlinx-coroutines = "1.8.0"
 compose = "1.6.1"
 compose-compiler = "1.5.11"
 compose-ui = "1.6.4"
@@ -28,6 +29,7 @@ multiplatform-paging = "3.3.0-alpha02-0.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "kotlinx-coroutines" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidx-lifecycleViewmodelCompose" }
