@@ -160,9 +160,10 @@ private fun CameraWithGrantedPermission(
     }
 
     LaunchedEffect(state.cameraMode) {
-        cameraProvider = withContext(executor.asCoroutineDispatcher()) {
-            ProcessCameraProvider.getInstance(context).await()
-        }
+        cameraProvider =
+            withContext(executor.asCoroutineDispatcher()) {
+                ProcessCameraProvider.getInstance(context).await()
+            }
         state.onCameraReady()
         cameraProvider?.unbindAll()
         cameraProvider?.bindToLifecycle(
