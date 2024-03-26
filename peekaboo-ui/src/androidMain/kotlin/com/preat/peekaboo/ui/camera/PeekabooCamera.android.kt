@@ -32,9 +32,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -43,9 +41,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.guava.await
-import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
@@ -134,7 +129,7 @@ private fun CameraWithGrantedPermission(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var cameraProvider: ProcessCameraProvider? by remember { mutableStateOf(null) }
+    val cameraProvider: ProcessCameraProvider? by loadCameraProvider(context)
 
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
@@ -159,20 +154,18 @@ private fun CameraWithGrantedPermission(
         }
     }
 
-    LaunchedEffect(state.cameraMode) {
-        cameraProvider =
-            withContext(executor.asCoroutineDispatcher()) {
-                ProcessCameraProvider.getInstance(context).await()
-            }
-        state.onCameraReady()
-        cameraProvider?.unbindAll()
-        cameraProvider?.bindToLifecycle(
-            lifecycleOwner,
-            cameraSelector,
-            preview,
-            imageCapture,
-        )
-        preview.setSurfaceProvider(previewView.surfaceProvider)
+    LaunchedEffect(state.cameraMode, cameraProvider) {
+        if (cameraProvider != null) {
+            state.onCameraReady()
+            cameraProvider?.unbindAll()
+            cameraProvider?.bindToLifecycle(
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                imageCapture,
+            )
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+        }
     }
 
     SideEffect {
