@@ -1,6 +1,6 @@
 # peekaboo
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.23-blue.svg?logo=kotlin)](http://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-v1.6.1-blue)](https://github.com/JetBrains/compose-multiplatform)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-v1.6.2-blue)](https://github.com/JetBrains/compose-multiplatform)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.onseok/peekaboo-image-picker?color=orange)](https://search.maven.org/search?q=g:io.github.onseok)
 [![Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -47,7 +47,7 @@ First, define the version in `libs.versions.toml`:
 
 ```toml
 [versions]
-peekaboo = "0.5.1"
+peekaboo = "0.5.2"
 
 [libraries]
 peekaboo-ui = { module = "io.github.onseok:peekaboo-ui", version.ref = "peekaboo" }
