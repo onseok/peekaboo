@@ -173,9 +173,14 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    val state = rememberPeekabooCameraState(
+        initialCameraMode = cameraMode,
+        onAnalyze = onAnalyze,
+        onCapture = onCapture,
+    )
     Box(
         modifier = modifier,
     ) {

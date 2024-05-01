@@ -18,7 +18,10 @@ package com.preat.peekaboo.ui.camera
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.os.SystemClock
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.OnImageCapturedCallback
 import androidx.camera.core.ImageProxy
@@ -55,9 +58,14 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    val state = rememberPeekabooCameraState(
+        initialCameraMode = cameraMode,
+        onAnalyze = onAnalyze,
+        onCapture = onCapture,
+    )
     Box(
         modifier = modifier,
     ) {
@@ -134,6 +142,25 @@ private fun CameraWithGrantedPermission(
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
+    val backgroundExecutor = remember { Executors.newSingleThreadExecutor() }
+    val imageAnalyzer = remember(state.onAnalyze) {
+        state.onAnalyze?.let { onAnalyze ->
+            val analyzer = ImageAnalysis.Builder()
+                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .build()
+
+            analyzer.apply {
+                setAnalyzer(backgroundExecutor) { imageProxy ->
+                    val frameTime = SystemClock.uptimeMillis()
+                    val imageBytes = imageProxy.toByteArray()
+                    onAnalyze(frameTime, imageBytes)
+                }
+            }
+        }
+    }
+
     val cameraSelector =
         remember(state.cameraMode) {
             val lensFacing =
@@ -161,8 +188,11 @@ private fun CameraWithGrantedPermission(
             cameraProvider?.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview,
-                imageCapture,
+                *listOfNotNull(
+                    preview,
+                    imageCapture,
+                    imageAnalyzer,
+                ).toTypedArray(),
             )
             preview.setSurfaceProvider(previewView.surfaceProvider)
         }
@@ -194,19 +224,8 @@ class ImageCaptureCallback(
     private val stopCapturing: () -> Unit,
 ) : OnImageCapturedCallback() {
     override fun onCaptureSuccess(image: ImageProxy) {
-        val rotationDegrees = image.imageInfo.rotationDegrees
-        val buffer = image.planes[0].buffer
-        val data = buffer.toByteArray()
-
-        // Rotate the image if necessary
-        val rotatedData =
-            if (rotationDegrees != 0) {
-                rotateImage(data, rotationDegrees)
-            } else {
-                data
-            }
-        image.close()
-        onCapture(rotatedData)
+        val imageBytes = image.toByteArray()
+        onCapture(imageBytes)
         stopCapturing()
     }
 }
@@ -228,4 +247,21 @@ private fun rotateImage(
     val outputStream = ByteArrayOutputStream()
     rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
     return outputStream.toByteArray()
+}
+
+private fun ImageProxy.toByteArray(): ByteArray {
+    val rotationDegrees = imageInfo.rotationDegrees
+    val buffer = planes[0].buffer
+    val data = buffer.toByteArray()
+
+    // Rotate the image if necessary
+    val rotatedData =
+        if (rotationDegrees != 0) {
+            rotateImage(data, rotationDegrees)
+        } else {
+            data
+        }
+    close()
+
+    return rotatedData
 }

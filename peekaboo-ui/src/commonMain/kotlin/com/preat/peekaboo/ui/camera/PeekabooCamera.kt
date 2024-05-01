@@ -45,6 +45,7 @@ expect fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit = {},
     progressIndicator: @Composable () -> Unit = {},
     onCapture: (byteArray: ByteArray?) -> Unit,
+    onAnalyze: ((frameTime: Long, data: ByteArray) -> Unit)? = null,
     permissionDeniedContent: @Composable () -> Unit = {},
 )
 
