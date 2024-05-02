@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
@@ -82,11 +83,20 @@ import platform.CoreGraphics.CGRectMake
 import platform.CoreImage.CIImage
 import platform.CoreMedia.CMSampleBufferGetImageBuffer
 import platform.CoreMedia.CMSampleBufferRef
+import platform.CoreMedia.kCMPixelFormat_32BGRA
+import platform.CoreVideo.CVPixelBufferGetBaseAddress
+import platform.CoreVideo.CVPixelBufferGetDataSize
+import platform.CoreVideo.CVPixelBufferLockBaseAddress
+import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
+import platform.CoreVideo.kCVPixelBufferPixelFormatTypeKey
 import platform.Foundation.NSData
+import platform.Foundation.NSDate
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
+import platform.Foundation.dataWithBytes
+import platform.Foundation.timeIntervalSince1970
 import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
@@ -110,6 +120,7 @@ import platform.darwin.dispatch_group_leave
 import platform.darwin.dispatch_group_notify
 import platform.darwin.dispatch_queue_create
 import platform.posix.memcpy
+import platform.posix.size_t
 
 private val deviceTypes =
     listOf(
@@ -538,7 +549,7 @@ private fun RealDeviceCamera(
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)
     }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
-    val videoOutput = remember {  AVCaptureVideoDataOutput() }
+    val videoOutput = remember { AVCaptureVideoDataOutput() }
 
     val photoCaptureDelegate =
         remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
@@ -579,8 +590,15 @@ private fun RealDeviceCamera(
                 captureSession.addInput(captureDeviceInput)
                 captureSession.addOutput(capturePhotoOutput)
 
-                videoOutput.setSampleBufferDelegate(frameAnalyzerDelegate, queue)
-                captureSession.addOutput(videoOutput)
+                if (captureSession.canAddOutput(videoOutput)) {
+                    val captureQueue = dispatch_queue_create("sampleBufferQueue", attr = null)
+                    videoOutput.setSampleBufferDelegate(frameAnalyzerDelegate, captureQueue)
+                    videoOutput.alwaysDiscardsLateVideoFrames = true
+                    videoOutput.videoSettings = mapOf(
+                        kCVPixelBufferPixelFormatTypeKey to kCMPixelFormat_32BGRA,
+                    )
+                    captureSession.addOutput(videoOutput)
+                }
             }
         }
 
@@ -610,12 +628,13 @@ private fun RealDeviceCamera(
             }
         }
 
+        captureSession.commitConfiguration()
+
         dispatch_group_enter(dispatchGroup)
         dispatch_async(queue) {
             captureSession.startRunning()
             dispatch_group_leave(dispatchGroup)
         }
-        captureSession.commitConfiguration()
 
         dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
             state.onCameraReady()
@@ -653,12 +672,7 @@ private fun RealDeviceCamera(
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
             cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
             dispatch_group_enter(dispatchGroup)
-            dispatch_async(
-                dispatch_get_global_queue(
-                    DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(),
-                    0UL,
-                ),
-            ) {
+            dispatch_async(queue) {
                 captureSession.startRunning()
                 dispatch_group_leave(dispatchGroup)
             }
@@ -723,12 +737,17 @@ class CameraFrameAnalyzerDelegate(
         didOutputSampleBuffer: CMSampleBufferRef?,
         fromConnection: AVCaptureConnection,
     ) {
-        val frameTime = CACurrentMediaTime().toLong()
-        val imageBufferRef = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
-        val ciImage = CIImage(imageBufferRef)
-        val uiImage = UIImage.imageWithCGImage(ciImage.CGImage)
-        val imageData = UIImagePNGRepresentation(uiImage) ?: return
-        onAnalyze(frameTime, imageData.toByteArray())
+        val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
+        val frameTimeMs = (NSDate().timeIntervalSince1970 * 1000).toLong()
+
+        CVPixelBufferLockBaseAddress(imageBuffer, 0uL)
+        val baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)
+        val bufferSize = CVPixelBufferGetDataSize(imageBuffer)
+        val data = NSData.dataWithBytes(bytes = baseAddress, length = bufferSize)
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
+
+        val bytes = data.toByteArray()
+        onAnalyze(frameTimeMs, bytes)
     }
 }
 
