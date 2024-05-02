@@ -16,7 +16,6 @@
 package com.preat.peekaboo.ui.camera
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.os.SystemClock
 import androidx.camera.core.AspectRatio
@@ -45,7 +44,6 @@ import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 
 private val executor = Executors.newSingleThreadExecutor()
@@ -181,7 +179,7 @@ private fun CameraWithGrantedPermission(
         }
     }
 
-    LaunchedEffect(state.cameraMode, cameraProvider) {
+    LaunchedEffect(state.cameraMode, cameraProvider, imageAnalyzer) {
         if (cameraProvider != null) {
             state.onCameraReady()
             cameraProvider?.unbindAll()
@@ -230,38 +228,30 @@ class ImageCaptureCallback(
     }
 }
 
-private fun ByteBuffer.toByteArray(): ByteArray {
-    rewind() // Rewind the buffer to zero
-    val data = ByteArray(remaining())
-    get(data) // Copy the buffer into a byte array
-    return data // Return the byte array
-}
-
-private fun rotateImage(
-    data: ByteArray,
-    degrees: Int,
-): ByteArray {
-    val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-    val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
-    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-    val outputStream = ByteArrayOutputStream()
-    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-    return outputStream.toByteArray()
-}
-
 private fun ImageProxy.toByteArray(): ByteArray {
     val rotationDegrees = imageInfo.rotationDegrees
-    val buffer = planes[0].buffer
-    val data = buffer.toByteArray()
+    val bitmap = toBitmap()
 
     // Rotate the image if necessary
     val rotatedData =
         if (rotationDegrees != 0) {
-            rotateImage(data, rotationDegrees)
+            bitmap.rotate(rotationDegrees)
         } else {
-            data
+            bitmap.toByteArray()
         }
     close()
 
     return rotatedData
+}
+
+private fun Bitmap.toByteArray(): ByteArray {
+    val stream = ByteArrayOutputStream()
+    this.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+    return stream.toByteArray()
+}
+
+private fun Bitmap.rotate(degrees: Int): ByteArray {
+    val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+    val rotatedBitmap = Bitmap.createBitmap(this, 0, 0, this.width, this.height, matrix, true)
+    return rotatedBitmap.toByteArray()
 }
