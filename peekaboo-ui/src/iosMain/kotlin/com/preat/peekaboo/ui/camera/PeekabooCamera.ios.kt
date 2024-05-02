@@ -551,9 +551,7 @@ private fun RealDeviceCamera(
         remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
 
     val frameAnalyzerDelegate = remember {
-        CameraFrameAnalyzerDelegate { frameTimeMs, data ->
-            state.onFrame?.invoke(frameTimeMs, data)
-        }
+        CameraFrameAnalyzerDelegate(state.onFrame)
     }
 
     val triggerCapture: () -> Unit = {
@@ -724,7 +722,7 @@ class OrientationListener(
 }
 
 class CameraFrameAnalyzerDelegate(
-    private val onFrame: (frameTimeMs: Long, data: ByteArray) -> Unit,
+    private val onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
 ) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -733,6 +731,8 @@ class CameraFrameAnalyzerDelegate(
         didOutputSampleBuffer: CMSampleBufferRef?,
         fromConnection: AVCaptureConnection,
     ) {
+        if (onFrame == null) return
+
         val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
         val frameTimeMs = (NSDate().timeIntervalSince1970 * 1000).toLong()
 
@@ -743,7 +743,7 @@ class CameraFrameAnalyzerDelegate(
         CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
 
         val bytes = data.toByteArray()
-        onFrame(frameTimeMs, bytes)
+        onFrame.invoke(frameTimeMs, bytes)
     }
 }
 
