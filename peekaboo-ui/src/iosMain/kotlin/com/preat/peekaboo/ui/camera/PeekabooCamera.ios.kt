@@ -43,6 +43,7 @@ import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
 import platform.AVFoundation.AVAuthorizationStatusRestricted
+import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVCaptureDeviceDiscoverySession.Companion.discoverySessionWithDeviceTypes
 import platform.AVFoundation.AVCaptureDeviceInput
@@ -55,12 +56,15 @@ import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDuoCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInUltraWideCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
 import platform.AVFoundation.AVCaptureInput
+import platform.AVFoundation.AVCaptureOutput
 import platform.AVFoundation.AVCapturePhoto
 import platform.AVFoundation.AVCapturePhotoCaptureDelegateProtocol
 import platform.AVFoundation.AVCapturePhotoOutput
 import platform.AVFoundation.AVCapturePhotoSettings
 import platform.AVFoundation.AVCaptureSession
 import platform.AVFoundation.AVCaptureSessionPresetPhoto
+import platform.AVFoundation.AVCaptureVideoDataOutput
+import platform.AVFoundation.AVCaptureVideoDataOutputSampleBufferDelegateProtocol
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeLeft
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeRight
 import platform.AVFoundation.AVCaptureVideoOrientationPortrait
@@ -75,11 +79,15 @@ import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
+import platform.CoreImage.CIImage
+import platform.CoreMedia.CMSampleBufferGetImageBuffer
+import platform.CoreMedia.CMSampleBufferRef
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
+import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.UIDevice
@@ -100,6 +108,7 @@ import platform.darwin.dispatch_group_create
 import platform.darwin.dispatch_group_enter
 import platform.darwin.dispatch_group_leave
 import platform.darwin.dispatch_group_notify
+import platform.darwin.dispatch_queue_create
 import platform.posix.memcpy
 
 private val deviceTypes =
@@ -525,10 +534,20 @@ private fun RealDeviceCamera(
     camera: AVCaptureDevice,
     modifier: Modifier,
 ) {
+    val queue = remember {
+        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)
+    }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
+    val videoOutput = remember {  AVCaptureVideoDataOutput() }
 
     val photoCaptureDelegate =
         remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
+
+    val frameAnalyzerDelegate = remember {
+        CameraFrameAnalyzerDelegate { frameTimeMs, data ->
+            state.onAnalyze?.invoke(frameTimeMs, data)
+        }
+    }
 
     val triggerCapture: () -> Unit = {
         val photoSettings =
@@ -559,6 +578,9 @@ private fun RealDeviceCamera(
                     deviceInputWithDevice(device = camera, error = null)!!
                 captureSession.addInput(captureDeviceInput)
                 captureSession.addOutput(capturePhotoOutput)
+
+                videoOutput.setSampleBufferDelegate(frameAnalyzerDelegate, queue)
+                captureSession.addOutput(videoOutput)
             }
         }
 
@@ -589,7 +611,7 @@ private fun RealDeviceCamera(
         }
 
         dispatch_group_enter(dispatchGroup)
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+        dispatch_async(queue) {
             captureSession.startRunning()
             dispatch_group_leave(dispatchGroup)
         }
@@ -600,8 +622,8 @@ private fun RealDeviceCamera(
         }
     }
 
-    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, state) {
-        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput)
+    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, videoOutput, state) {
+        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput, videoOutput)
         val notificationName = platform.UIKit.UIDeviceOrientationDidChangeNotification
         NSNotificationCenter.defaultCenter.addObserver(
             observer = listener,
@@ -658,6 +680,7 @@ private fun RealDeviceCamera(
 class OrientationListener(
     private val cameraPreviewLayer: AVCaptureVideoPreviewLayer,
     private val capturePhotoOutput: AVCapturePhotoOutput,
+    private val videoOutput: AVCaptureVideoDataOutput,
 ) : NSObject() {
     @OptIn(BetaInteropApi::class)
     @Suppress("UNUSED_PARAMETER")
@@ -685,6 +708,27 @@ class OrientationListener(
         }
         capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
             ?.videoOrientation = actualOrientation
+        videoOutput.connectionWithMediaType(AVMediaTypeVideo)
+            ?.videoOrientation = actualOrientation
+    }
+}
+
+class CameraFrameAnalyzerDelegate(
+    private val onAnalyze: (frameTimeMs: Long, data: ByteArray) -> Unit,
+) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
+    @OptIn(ExperimentalForeignApi::class)
+    override fun captureOutput(
+        output: AVCaptureOutput,
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        didOutputSampleBuffer: CMSampleBufferRef?,
+        fromConnection: AVCaptureConnection,
+    ) {
+        val frameTime = CACurrentMediaTime().toLong()
+        val imageBufferRef = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
+        val ciImage = CIImage(imageBufferRef)
+        val uiImage = UIImage.imageWithCGImage(ciImage.CGImage)
+        val imageData = UIImagePNGRepresentation(uiImage) ?: return
+        onAnalyze(frameTime, imageData.toByteArray())
     }
 }
 
