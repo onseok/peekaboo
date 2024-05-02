@@ -4,5 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+    <string>This app uses camera for capturing photos to demo the library</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app uses your photo library to demo the library</string>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    </dict>
 </dict>
 </plist>
