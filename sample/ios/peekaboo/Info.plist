@@ -10,6 +10,5 @@
     <string>This app uses your photo library to demo the library</string>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
-    </dict>
 </dict>
 </plist>
