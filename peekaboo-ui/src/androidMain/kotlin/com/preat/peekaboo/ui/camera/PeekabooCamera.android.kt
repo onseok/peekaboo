@@ -17,7 +17,6 @@ package com.preat.peekaboo.ui.camera
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
-import android.os.SystemClock
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -151,7 +150,7 @@ private fun CameraWithGrantedPermission(
 
             analyzer.apply {
                 setAnalyzer(backgroundExecutor) { imageProxy ->
-                    val frameTime = SystemClock.uptimeMillis()
+                    val frameTime = System.currentTimeMillis()
                     val imageBytes = imageProxy.toByteArray()
                     onFrame(frameTime, imageBytes)
                 }
