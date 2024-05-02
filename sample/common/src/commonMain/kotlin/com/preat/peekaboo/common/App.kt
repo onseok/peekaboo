@@ -113,7 +113,7 @@ fun App() {
                                 }
                                 showCamera = false
                             },
-                            onAnalyze = { frameTimeMs, byteArray ->
+                            onFrame = { frameTimeMs, byteArray ->
                                 frames = frames + Pair(frameTimeMs, byteArray.toImageBitmap())
                                 if (frames.size > 15) {
                                     frames = frames.drop(1)

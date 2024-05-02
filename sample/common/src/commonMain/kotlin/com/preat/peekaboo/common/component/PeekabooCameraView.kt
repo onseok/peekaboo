@@ -45,10 +45,10 @@ import com.preat.peekaboo.ui.camera.rememberPeekabooCameraState
 internal fun PeekabooCameraView(
     modifier: Modifier = Modifier,
     onCapture: (ByteArray?) -> Unit,
-    onAnalyze: (Long, ByteArray) -> Unit,
+    onFrame: (Long, ByteArray) -> Unit,
     onBack: () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(onCapture = onCapture, onAnalyze = onAnalyze)
+    val state = rememberPeekabooCameraState(onCapture = onCapture, onFrame = onFrame)
     Box(modifier = modifier) {
         PeekabooCamera(
             state = state,

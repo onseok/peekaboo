@@ -26,7 +26,7 @@ import androidx.compose.runtime.setValue
 @Stable
 actual class PeekabooCameraState(
     cameraMode: CameraMode,
-    internal var onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    internal var onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     internal var onCapture: (ByteArray?) -> Unit,
 ) {
     actual var isCameraReady: Boolean by mutableStateOf(false)
@@ -60,7 +60,7 @@ actual class PeekabooCameraState(
 
     companion object {
         fun saver(
-            onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+            onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
             onCapture: (ByteArray?) -> Unit,
         ): Saver<PeekabooCameraState, Int> {
             return Saver(
@@ -70,7 +70,7 @@ actual class PeekabooCameraState(
                 restore = {
                     PeekabooCameraState(
                         cameraMode = cameraModeFromId(it),
-                        onAnalyze = onAnalyze,
+                        onFrame = onFrame,
                         onCapture = onCapture,
                     )
                 },
@@ -82,12 +82,12 @@ actual class PeekabooCameraState(
 @Composable
 actual fun rememberPeekabooCameraState(
     initialCameraMode: CameraMode,
-    onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     onCapture: (ByteArray?) -> Unit,
 ): PeekabooCameraState {
     return rememberSaveable(
-        saver = PeekabooCameraState.saver(onAnalyze, onCapture),
-    ) { PeekabooCameraState(initialCameraMode, onAnalyze, onCapture) }.apply {
+        saver = PeekabooCameraState.saver(onFrame, onCapture),
+    ) { PeekabooCameraState(initialCameraMode, onFrame, onCapture) }.apply {
         this.onCapture = onCapture
     }
 }

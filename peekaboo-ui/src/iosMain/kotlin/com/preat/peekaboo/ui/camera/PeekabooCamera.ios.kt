@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.BetaInteropApi
-import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
@@ -80,7 +79,6 @@ import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
-import platform.CoreImage.CIImage
 import platform.CoreMedia.CMSampleBufferGetImageBuffer
 import platform.CoreMedia.CMSampleBufferRef
 import platform.CoreMedia.kCMPixelFormat_32BGRA
@@ -97,7 +95,6 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
 import platform.Foundation.dataWithBytes
 import platform.Foundation.timeIntervalSince1970
-import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.UIDevice
@@ -120,7 +117,6 @@ import platform.darwin.dispatch_group_leave
 import platform.darwin.dispatch_group_notify
 import platform.darwin.dispatch_queue_create
 import platform.posix.memcpy
-import platform.posix.size_t
 
 private val deviceTypes =
     listOf(
@@ -193,12 +189,12 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
-    onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     val state = rememberPeekabooCameraState(
         initialCameraMode = cameraMode,
-        onAnalyze = onAnalyze,
+        onFrame = onFrame,
         onCapture = onCapture,
     )
     Box(
@@ -556,7 +552,7 @@ private fun RealDeviceCamera(
 
     val frameAnalyzerDelegate = remember {
         CameraFrameAnalyzerDelegate { frameTimeMs, data ->
-            state.onAnalyze?.invoke(frameTimeMs, data)
+            state.onFrame?.invoke(frameTimeMs, data)
         }
     }
 
@@ -728,7 +724,7 @@ class OrientationListener(
 }
 
 class CameraFrameAnalyzerDelegate(
-    private val onAnalyze: (frameTimeMs: Long, data: ByteArray) -> Unit,
+    private val onFrame: (frameTimeMs: Long, data: ByteArray) -> Unit,
 ) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -747,7 +743,7 @@ class CameraFrameAnalyzerDelegate(
         CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
 
         val bytes = data.toByteArray()
-        onAnalyze(frameTimeMs, bytes)
+        onFrame(frameTimeMs, bytes)
     }
 }
 

@@ -56,12 +56,12 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
-    onAnalyze: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     val state = rememberPeekabooCameraState(
         initialCameraMode = cameraMode,
-        onAnalyze = onAnalyze,
+        onFrame = onFrame,
         onCapture = onCapture,
     )
     Box(
@@ -141,8 +141,8 @@ private fun CameraWithGrantedPermission(
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
     val backgroundExecutor = remember { Executors.newSingleThreadExecutor() }
-    val imageAnalyzer = remember(state.onAnalyze) {
-        state.onAnalyze?.let { onAnalyze ->
+    val imageAnalyzer = remember(state.onFrame) {
+        state.onFrame?.let { onFrame ->
             val analyzer = ImageAnalysis.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -153,7 +153,7 @@ private fun CameraWithGrantedPermission(
                 setAnalyzer(backgroundExecutor) { imageProxy ->
                     val frameTime = SystemClock.uptimeMillis()
                     val imageBytes = imageProxy.toByteArray()
-                    onAnalyze(frameTime, imageBytes)
+                    onFrame(frameTime, imageBytes)
                 }
             }
         }
