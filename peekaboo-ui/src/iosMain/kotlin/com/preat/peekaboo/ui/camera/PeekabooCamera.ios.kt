@@ -189,7 +189,7 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
-    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     val state = rememberPeekabooCameraState(
@@ -722,7 +722,7 @@ class OrientationListener(
 }
 
 class CameraFrameAnalyzerDelegate(
-    private val onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    private val onFrame: ((frame: ByteArray) -> Unit)?,
 ) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -734,8 +734,6 @@ class CameraFrameAnalyzerDelegate(
         if (onFrame == null) return
 
         val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
-        val frameTimeMs = (NSDate().timeIntervalSince1970 * 1000).toLong()
-
         CVPixelBufferLockBaseAddress(imageBuffer, 0uL)
         val baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)
         val bufferSize = CVPixelBufferGetDataSize(imageBuffer)
@@ -743,7 +741,7 @@ class CameraFrameAnalyzerDelegate(
         CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
 
         val bytes = data.toByteArray()
-        onFrame.invoke(frameTimeMs, bytes)
+        onFrame.invoke(bytes)
     }
 }
 

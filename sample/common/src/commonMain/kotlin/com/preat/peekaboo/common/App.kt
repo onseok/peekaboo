@@ -60,7 +60,7 @@ import com.preat.peekaboo.image.picker.toImageBitmap
 fun App() {
     val scope = rememberCoroutineScope()
     var images by remember { mutableStateOf(listOf<ImageBitmap>()) }
-    var frames by remember { mutableStateOf(listOf<Pair<Long, ImageBitmap>>()) }
+    var frames by remember { mutableStateOf(listOf<ImageBitmap>()) }
     val snackbarHostState = remember { SnackbarHostState() }
     var showCamera by rememberSaveable { mutableStateOf(false) }
     var showGallery by rememberSaveable { mutableStateOf(false) }
@@ -113,8 +113,8 @@ fun App() {
                                 }
                                 showCamera = false
                             },
-                            onFrame = { frameTimeMs, byteArray ->
-                                frames = frames + Pair(frameTimeMs, byteArray.toImageBitmap())
+                            onFrame = { frame ->
+                                frames = frames + frame.toImageBitmap()
                                 if (frames.size > 15) {
                                     frames = frames.drop(1)
                                 }
@@ -125,11 +125,11 @@ fun App() {
                                 .heightIn(min = 50.dp)
                                 .fillMaxWidth(),
                         ) {
-                            items(frames) { (frameTimeMs, image) ->
+                            items(frames) { image ->
                                 Box {
                                     Image(
                                         bitmap = image,
-                                        contentDescription = "Frame at $frameTimeMs ms",
+                                        contentDescription = "frame",
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier.size(50.dp),
                                     )

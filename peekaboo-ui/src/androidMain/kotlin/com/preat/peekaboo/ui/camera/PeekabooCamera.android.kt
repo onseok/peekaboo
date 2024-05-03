@@ -55,7 +55,7 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
-    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)?,
+    onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     val state = rememberPeekabooCameraState(
@@ -150,9 +150,8 @@ private fun CameraWithGrantedPermission(
 
             analyzer.apply {
                 setAnalyzer(backgroundExecutor) { imageProxy ->
-                    val frameTime = System.currentTimeMillis()
                     val imageBytes = imageProxy.toByteArray()
-                    onFrame(frameTime, imageBytes)
+                    onFrame(imageBytes)
                 }
             }
         }

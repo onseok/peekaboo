@@ -27,7 +27,7 @@ import androidx.compose.runtime.remember
 @Composable
 expect fun rememberPeekabooCameraState(
     initialCameraMode: CameraMode = CameraMode.Back,
-    onFrame: ((frameTimeMs: Long, data: ByteArray) -> Unit)? = null,
+    onFrame: ((frame: ByteArray) -> Unit)? = null,
     onCapture: (ByteArray?) -> Unit,
 ): PeekabooCameraState
 
