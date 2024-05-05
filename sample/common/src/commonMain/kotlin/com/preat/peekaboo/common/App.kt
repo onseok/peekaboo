@@ -118,7 +118,7 @@ fun App() {
                                 if (frames.size > 15) {
                                     frames = frames.drop(1)
                                 }
-                            }
+                            },
                         )
                         LazyRow(
                             Modifier

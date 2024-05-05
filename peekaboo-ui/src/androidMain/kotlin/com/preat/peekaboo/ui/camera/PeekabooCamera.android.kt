@@ -58,11 +58,12 @@ actual fun PeekabooCamera(
     onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(
-        initialCameraMode = cameraMode,
-        onFrame = onFrame,
-        onCapture = onCapture,
-    )
+    val state =
+        rememberPeekabooCameraState(
+            initialCameraMode = cameraMode,
+            onFrame = onFrame,
+            onCapture = onCapture,
+        )
     Box(
         modifier = modifier,
     ) {
@@ -140,22 +141,24 @@ private fun CameraWithGrantedPermission(
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
     val backgroundExecutor = remember { Executors.newSingleThreadExecutor() }
-    val imageAnalyzer = remember(state.onFrame) {
-        state.onFrame?.let { onFrame ->
-            val analyzer = ImageAnalysis.Builder()
-                .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                .build()
+    val imageAnalyzer =
+        remember(state.onFrame) {
+            state.onFrame?.let { onFrame ->
+                val analyzer =
+                    ImageAnalysis.Builder()
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                        .build()
 
-            analyzer.apply {
-                setAnalyzer(backgroundExecutor) { imageProxy ->
-                    val imageBytes = imageProxy.toByteArray()
-                    onFrame(imageBytes)
+                analyzer.apply {
+                    setAnalyzer(backgroundExecutor) { imageProxy ->
+                        val imageBytes = imageProxy.toByteArray()
+                        onFrame(imageBytes)
+                    }
                 }
             }
         }
-    }
 
     val cameraSelector =
         remember(state.cameraMode) {

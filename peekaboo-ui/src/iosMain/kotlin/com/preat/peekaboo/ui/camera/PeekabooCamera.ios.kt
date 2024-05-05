@@ -88,13 +88,11 @@ import platform.CoreVideo.CVPixelBufferLockBaseAddress
 import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
 import platform.CoreVideo.kCVPixelBufferPixelFormatTypeKey
 import platform.Foundation.NSData
-import platform.Foundation.NSDate
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
 import platform.Foundation.dataWithBytes
-import platform.Foundation.timeIntervalSince1970
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.UIDevice
@@ -192,11 +190,12 @@ actual fun PeekabooCamera(
     onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(
-        initialCameraMode = cameraMode,
-        onFrame = onFrame,
-        onCapture = onCapture,
-    )
+    val state =
+        rememberPeekabooCameraState(
+            initialCameraMode = cameraMode,
+            onFrame = onFrame,
+            onCapture = onCapture,
+        )
     Box(
         modifier = modifier,
     ) {
@@ -541,18 +540,20 @@ private fun RealDeviceCamera(
     camera: AVCaptureDevice,
     modifier: Modifier,
 ) {
-    val queue = remember {
-        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)
-    }
+    val queue =
+        remember {
+            dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)
+        }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
     val videoOutput = remember { AVCaptureVideoDataOutput() }
 
     val photoCaptureDelegate =
         remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
 
-    val frameAnalyzerDelegate = remember {
-        CameraFrameAnalyzerDelegate(state.onFrame)
-    }
+    val frameAnalyzerDelegate =
+        remember {
+            CameraFrameAnalyzerDelegate(state.onFrame)
+        }
 
     val triggerCapture: () -> Unit = {
         val photoSettings =
@@ -588,9 +589,10 @@ private fun RealDeviceCamera(
                     val captureQueue = dispatch_queue_create("sampleBufferQueue", attr = null)
                     videoOutput.setSampleBufferDelegate(frameAnalyzerDelegate, captureQueue)
                     videoOutput.alwaysDiscardsLateVideoFrames = true
-                    videoOutput.videoSettings = mapOf(
-                        kCVPixelBufferPixelFormatTypeKey to kCMPixelFormat_32BGRA,
-                    )
+                    videoOutput.videoSettings =
+                        mapOf(
+                            kCVPixelBufferPixelFormatTypeKey to kCMPixelFormat_32BGRA,
+                        )
                     captureSession.addOutput(videoOutput)
                 }
             }
