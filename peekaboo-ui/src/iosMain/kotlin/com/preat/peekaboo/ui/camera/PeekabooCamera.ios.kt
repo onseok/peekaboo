@@ -43,6 +43,7 @@ import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
 import platform.AVFoundation.AVAuthorizationStatusRestricted
+import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice
 import platform.AVFoundation.AVCaptureDeviceDiscoverySession.Companion.discoverySessionWithDeviceTypes
 import platform.AVFoundation.AVCaptureDeviceInput
@@ -55,12 +56,15 @@ import platform.AVFoundation.AVCaptureDeviceTypeBuiltInDuoCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInUltraWideCamera
 import platform.AVFoundation.AVCaptureDeviceTypeBuiltInWideAngleCamera
 import platform.AVFoundation.AVCaptureInput
+import platform.AVFoundation.AVCaptureOutput
 import platform.AVFoundation.AVCapturePhoto
 import platform.AVFoundation.AVCapturePhotoCaptureDelegateProtocol
 import platform.AVFoundation.AVCapturePhotoOutput
 import platform.AVFoundation.AVCapturePhotoSettings
 import platform.AVFoundation.AVCaptureSession
 import platform.AVFoundation.AVCaptureSessionPresetPhoto
+import platform.AVFoundation.AVCaptureVideoDataOutput
+import platform.AVFoundation.AVCaptureVideoDataOutputSampleBufferDelegateProtocol
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeLeft
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeRight
 import platform.AVFoundation.AVCaptureVideoOrientationPortrait
@@ -75,11 +79,20 @@ import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
+import platform.CoreMedia.CMSampleBufferGetImageBuffer
+import platform.CoreMedia.CMSampleBufferRef
+import platform.CoreMedia.kCMPixelFormat_32BGRA
+import platform.CoreVideo.CVPixelBufferGetBaseAddress
+import platform.CoreVideo.CVPixelBufferGetDataSize
+import platform.CoreVideo.CVPixelBufferLockBaseAddress
+import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
+import platform.CoreVideo.kCVPixelBufferPixelFormatTypeKey
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSSelectorFromString
+import platform.Foundation.dataWithBytes
 import platform.QuartzCore.CATransaction
 import platform.QuartzCore.kCATransactionDisableActions
 import platform.UIKit.UIDevice
@@ -100,6 +113,7 @@ import platform.darwin.dispatch_group_create
 import platform.darwin.dispatch_group_enter
 import platform.darwin.dispatch_group_leave
 import platform.darwin.dispatch_group_notify
+import platform.darwin.dispatch_queue_create
 import platform.posix.memcpy
 
 private val deviceTypes =
@@ -173,9 +187,15 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    val state =
+        rememberPeekabooCameraState(
+            initialCameraMode = cameraMode,
+            onFrame = onFrame,
+            onCapture = onCapture,
+        )
     Box(
         modifier = modifier,
     ) {
@@ -520,10 +540,20 @@ private fun RealDeviceCamera(
     camera: AVCaptureDevice,
     modifier: Modifier,
 ) {
+    val queue =
+        remember {
+            dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)
+        }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
+    val videoOutput = remember { AVCaptureVideoDataOutput() }
 
     val photoCaptureDelegate =
         remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
+
+    val frameAnalyzerDelegate =
+        remember {
+            CameraFrameAnalyzerDelegate(state.onFrame)
+        }
 
     val triggerCapture: () -> Unit = {
         val photoSettings =
@@ -554,6 +584,17 @@ private fun RealDeviceCamera(
                     deviceInputWithDevice(device = camera, error = null)!!
                 captureSession.addInput(captureDeviceInput)
                 captureSession.addOutput(capturePhotoOutput)
+
+                if (captureSession.canAddOutput(videoOutput)) {
+                    val captureQueue = dispatch_queue_create("sampleBufferQueue", attr = null)
+                    videoOutput.setSampleBufferDelegate(frameAnalyzerDelegate, captureQueue)
+                    videoOutput.alwaysDiscardsLateVideoFrames = true
+                    videoOutput.videoSettings =
+                        mapOf(
+                            kCVPixelBufferPixelFormatTypeKey to kCMPixelFormat_32BGRA,
+                        )
+                    captureSession.addOutput(videoOutput)
+                }
             }
         }
 
@@ -583,20 +624,21 @@ private fun RealDeviceCamera(
             }
         }
 
+        captureSession.commitConfiguration()
+
         dispatch_group_enter(dispatchGroup)
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(), 0UL)) {
+        dispatch_async(queue) {
             captureSession.startRunning()
             dispatch_group_leave(dispatchGroup)
         }
-        captureSession.commitConfiguration()
 
         dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
             state.onCameraReady()
         }
     }
 
-    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, state) {
-        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput)
+    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, videoOutput, state) {
+        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput, videoOutput)
         val notificationName = platform.UIKit.UIDeviceOrientationDidChangeNotification
         NSNotificationCenter.defaultCenter.addObserver(
             observer = listener,
@@ -626,12 +668,7 @@ private fun RealDeviceCamera(
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
             cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
             dispatch_group_enter(dispatchGroup)
-            dispatch_async(
-                dispatch_get_global_queue(
-                    DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(),
-                    0UL,
-                ),
-            ) {
+            dispatch_async(queue) {
                 captureSession.startRunning()
                 dispatch_group_leave(dispatchGroup)
             }
@@ -653,6 +690,7 @@ private fun RealDeviceCamera(
 class OrientationListener(
     private val cameraPreviewLayer: AVCaptureVideoPreviewLayer,
     private val capturePhotoOutput: AVCapturePhotoOutput,
+    private val videoOutput: AVCaptureVideoDataOutput,
 ) : NSObject() {
     @OptIn(BetaInteropApi::class)
     @Suppress("UNUSED_PARAMETER")
@@ -680,6 +718,32 @@ class OrientationListener(
         }
         capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
             ?.videoOrientation = actualOrientation
+        videoOutput.connectionWithMediaType(AVMediaTypeVideo)
+            ?.videoOrientation = actualOrientation
+    }
+}
+
+class CameraFrameAnalyzerDelegate(
+    private val onFrame: ((frame: ByteArray) -> Unit)?,
+) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
+    @OptIn(ExperimentalForeignApi::class)
+    override fun captureOutput(
+        output: AVCaptureOutput,
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        didOutputSampleBuffer: CMSampleBufferRef?,
+        fromConnection: AVCaptureConnection,
+    ) {
+        if (onFrame == null) return
+
+        val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
+        CVPixelBufferLockBaseAddress(imageBuffer, 0uL)
+        val baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)
+        val bufferSize = CVPixelBufferGetDataSize(imageBuffer)
+        val data = NSData.dataWithBytes(bytes = baseAddress, length = bufferSize)
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
+
+        val bytes = data.toByteArray()
+        onFrame.invoke(bytes)
     }
 }
 

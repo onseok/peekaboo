@@ -17,11 +17,14 @@ package com.preat.peekaboo.common
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -57,6 +60,7 @@ import com.preat.peekaboo.image.picker.toImageBitmap
 fun App() {
     val scope = rememberCoroutineScope()
     var images by remember { mutableStateOf(listOf<ImageBitmap>()) }
+    var frames by remember { mutableStateOf(listOf<ImageBitmap>()) }
     val snackbarHostState = remember { SnackbarHostState() }
     var showCamera by rememberSaveable { mutableStateOf(false) }
     var showGallery by rememberSaveable { mutableStateOf(false) }
@@ -101,7 +105,7 @@ fun App() {
                 when {
                     showCamera -> {
                         PeekabooCameraView(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.weight(1f),
                             onBack = { showCamera = false },
                             onCapture = { byteArray ->
                                 byteArray?.let {
@@ -109,7 +113,29 @@ fun App() {
                                 }
                                 showCamera = false
                             },
+                            onFrame = { frame ->
+                                frames = frames + frame.toImageBitmap()
+                                if (frames.size > 15) {
+                                    frames = frames.drop(1)
+                                }
+                            },
                         )
+                        LazyRow(
+                            Modifier
+                                .heightIn(min = 50.dp)
+                                .fillMaxWidth(),
+                        ) {
+                            items(frames) { image ->
+                                Box {
+                                    Image(
+                                        bitmap = image,
+                                        contentDescription = "frame",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(50.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
                     showGallery -> {
                         PeekabooGalleryView(

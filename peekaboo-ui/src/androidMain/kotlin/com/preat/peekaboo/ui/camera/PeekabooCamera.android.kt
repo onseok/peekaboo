@@ -16,9 +16,10 @@
 package com.preat.peekaboo.ui.camera
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.OnImageCapturedCallback
 import androidx.camera.core.ImageProxy
@@ -42,7 +43,6 @@ import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 
 private val executor = Executors.newSingleThreadExecutor()
@@ -55,9 +55,15 @@ actual fun PeekabooCamera(
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
+    onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
-    val state = rememberPeekabooCameraState(cameraMode, onCapture = onCapture)
+    val state =
+        rememberPeekabooCameraState(
+            initialCameraMode = cameraMode,
+            onFrame = onFrame,
+            onCapture = onCapture,
+        )
     Box(
         modifier = modifier,
     ) {
@@ -134,6 +140,26 @@ private fun CameraWithGrantedPermission(
     val preview = Preview.Builder().build()
     val previewView = remember { PreviewView(context) }
     val imageCapture: ImageCapture = remember { ImageCapture.Builder().build() }
+    val backgroundExecutor = remember { Executors.newSingleThreadExecutor() }
+    val imageAnalyzer =
+        remember(state.onFrame) {
+            state.onFrame?.let { onFrame ->
+                val analyzer =
+                    ImageAnalysis.Builder()
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                        .build()
+
+                analyzer.apply {
+                    setAnalyzer(backgroundExecutor) { imageProxy ->
+                        val imageBytes = imageProxy.toByteArray()
+                        onFrame(imageBytes)
+                    }
+                }
+            }
+        }
+
     val cameraSelector =
         remember(state.cameraMode) {
             val lensFacing =
@@ -154,15 +180,18 @@ private fun CameraWithGrantedPermission(
         }
     }
 
-    LaunchedEffect(state.cameraMode, cameraProvider) {
+    LaunchedEffect(state.cameraMode, cameraProvider, imageAnalyzer) {
         if (cameraProvider != null) {
             state.onCameraReady()
             cameraProvider?.unbindAll()
             cameraProvider?.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview,
-                imageCapture,
+                *listOfNotNull(
+                    preview,
+                    imageCapture,
+                    imageAnalyzer,
+                ).toTypedArray(),
             )
             preview.setSurfaceProvider(previewView.surfaceProvider)
         }
@@ -194,38 +223,36 @@ class ImageCaptureCallback(
     private val stopCapturing: () -> Unit,
 ) : OnImageCapturedCallback() {
     override fun onCaptureSuccess(image: ImageProxy) {
-        val rotationDegrees = image.imageInfo.rotationDegrees
-        val buffer = image.planes[0].buffer
-        val data = buffer.toByteArray()
-
-        // Rotate the image if necessary
-        val rotatedData =
-            if (rotationDegrees != 0) {
-                rotateImage(data, rotationDegrees)
-            } else {
-                data
-            }
-        image.close()
-        onCapture(rotatedData)
+        val imageBytes = image.toByteArray()
+        onCapture(imageBytes)
         stopCapturing()
     }
 }
 
-private fun ByteBuffer.toByteArray(): ByteArray {
-    rewind() // Rewind the buffer to zero
-    val data = ByteArray(remaining())
-    get(data) // Copy the buffer into a byte array
-    return data // Return the byte array
+private fun ImageProxy.toByteArray(): ByteArray {
+    val rotationDegrees = imageInfo.rotationDegrees
+    val bitmap = toBitmap()
+
+    // Rotate the image if necessary
+    val rotatedData =
+        if (rotationDegrees != 0) {
+            bitmap.rotate(rotationDegrees)
+        } else {
+            bitmap.toByteArray()
+        }
+    close()
+
+    return rotatedData
 }
 
-private fun rotateImage(
-    data: ByteArray,
-    degrees: Int,
-): ByteArray {
-    val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
+private fun Bitmap.toByteArray(): ByteArray {
+    val stream = ByteArrayOutputStream()
+    this.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+    return stream.toByteArray()
+}
+
+private fun Bitmap.rotate(degrees: Int): ByteArray {
     val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
-    val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-    val outputStream = ByteArrayOutputStream()
-    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-    return outputStream.toByteArray()
+    val rotatedBitmap = Bitmap.createBitmap(this, 0, 0, this.width, this.height, matrix, true)
+    return rotatedBitmap.toByteArray()
 }
