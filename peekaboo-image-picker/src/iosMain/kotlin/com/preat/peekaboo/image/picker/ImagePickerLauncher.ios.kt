@@ -18,6 +18,7 @@ package com.preat.peekaboo.image.picker
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.refTo
@@ -25,6 +26,8 @@ import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeMake
@@ -41,11 +44,13 @@ import platform.PhotosUI.PHPickerResult
 import platform.PhotosUI.PHPickerViewController
 import platform.PhotosUI.PHPickerViewControllerDelegateProtocol
 import platform.UIKit.UIApplication
+import platform.UIKit.UIGraphicsBeginImageContext
 import platform.UIKit.UIGraphicsBeginImageContextWithOptions
 import platform.UIKit.UIGraphicsEndImageContext
 import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
+import platform.UIKit.UIImageOrientation
 import platform.darwin.NSObject
 import platform.darwin.dispatch_group_create
 import platform.darwin.dispatch_group_enter
@@ -131,6 +136,16 @@ private fun UIImage.toByteArray(compressionQuality: Double): ByteArray {
         memcpy(this.refTo(0), jpegData.bytes, jpegData.length)
     }
 }
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+private fun UIImage.fixImageOrientation(): UIImage {
+    if (this.imageOrientation == UIImageOrientation.UIImageOrientationUp) return this
+
+    UIGraphicsBeginImageContext(size = this.size)
+    this.drawAtPoint(CGPointMake(0.0, 0.0))
+    val fixedImage = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return fixedImage ?: this
+}
 
 @OptIn(ExperimentalForeignApi::class)
 private fun UIImage.fitInto(
@@ -141,10 +156,11 @@ private fun UIImage.fitInto(
     compressionQuality: Double,
     filterOptions: FilterOptions,
 ): UIImage {
-    val imageData = this.toByteArray(compressionQuality)
+    val fixedImage = runBlocking { this@fitInto.fixImageOrientation() }
+    val imageData = fixedImage.toByteArray(compressionQuality)
     if (imageData.size > resizeThresholdBytes) {
-        val originalWidth = this.size.useContents { width }
-        val originalHeight = this.size.useContents { height }
+        val originalWidth = fixedImage.size.useContents { width }
+        val originalHeight = fixedImage.size.useContents { height }
         val originalRatio = originalWidth / originalHeight
 
         val targetRatio = maxWidth.toDouble() / maxHeight.toDouble()
@@ -159,11 +175,11 @@ private fun UIImage.fitInto(
         val newHeight = originalHeight * scale
 
         val targetSize = CGSizeMake(newWidth, newHeight)
-        val resizedImage = this.resize(targetSize)
+        val resizedImage = fixedImage.resize(targetSize)
 
         return applyFilterToUIImage(resizedImage, filterOptions)
     } else {
-        return applyFilterToUIImage(this, filterOptions)
+        return applyFilterToUIImage(fixedImage, filterOptions)
     }
 }
 
