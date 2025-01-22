@@ -42,6 +42,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import com.preat.peekaboo.ui.camera.model.PeekabooCameraImage
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
@@ -54,7 +55,7 @@ actual fun PeekabooCamera(
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray?) -> Unit,
+    onCapture: (image: PeekabooCameraImage?) -> Unit,
     onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
@@ -219,14 +220,22 @@ private fun CameraWithGrantedPermission(
 }
 
 class ImageCaptureCallback(
-    private val onCapture: (byteArray: ByteArray?) -> Unit,
+    private val onCapture: (image: PeekabooCameraImage?) -> Unit,
     private val stopCapturing: () -> Unit,
 ) : OnImageCapturedCallback() {
     override fun onCaptureSuccess(image: ImageProxy) {
-        val imageBytes = image.toByteArray()
-        onCapture(imageBytes)
+        val peekabooImage = image.toPeekabooCameraImage()
+        onCapture(peekabooImage)
         stopCapturing()
     }
+}
+
+private fun ImageProxy.toPeekabooCameraImage(): PeekabooCameraImage {
+    return PeekabooCameraImage(
+        image = this.toByteArray(),
+        height = height,
+        width = width
+    )
 }
 
 private fun ImageProxy.toByteArray(): ByteArray {

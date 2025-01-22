@@ -18,6 +18,7 @@ package com.preat.peekaboo.ui.camera
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import com.preat.peekaboo.ui.camera.model.PeekabooCameraImage
 
 /**
  * Create and [remember] a [PeekabooCameraState]
@@ -28,7 +29,7 @@ import androidx.compose.runtime.remember
 expect fun rememberPeekabooCameraState(
     initialCameraMode: CameraMode = CameraMode.Back,
     onFrame: ((frame: ByteArray) -> Unit)? = null,
-    onCapture: (ByteArray?) -> Unit,
+    onCapture: (PeekabooCameraImage?) -> Unit,
 ): PeekabooCameraState
 
 /**

@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.UIKitView
+import com.preat.peekaboo.ui.camera.model.PeekabooCameraImage
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -186,7 +187,7 @@ actual fun PeekabooCamera(
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray?) -> Unit,
+    onCapture: (image: PeekabooCameraImage?) -> Unit,
     onFrame: ((frame: ByteArray) -> Unit)?,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
@@ -236,7 +237,7 @@ private fun BoxScope.AuthorizedCamera(
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray?) -> Unit,
+    onCapture: (image: PeekabooCameraImage?) -> Unit,
 ) {
     var cameraReady by remember { mutableStateOf(false) }
     val camera: AVCaptureDevice? =
@@ -327,7 +328,7 @@ private fun BoxScope.RealDeviceCamera(
     captureIcon: @Composable (onClick: () -> Unit) -> Unit,
     convertIcon: @Composable (onClick: () -> Unit) -> Unit,
     progressIndicator: @Composable () -> Unit,
-    onCapture: (byteArray: ByteArray?) -> Unit,
+    onCapture: (image: PeekabooCameraImage?) -> Unit,
 ) {
     var isFrontCamera by remember { mutableStateOf(camera.position == AVCaptureDevicePositionFront) }
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
@@ -751,7 +752,7 @@ class CameraFrameAnalyzerDelegate(
 
 class PhotoCaptureDelegate(
     private val onCaptureEnd: () -> Unit,
-    private val onCapture: (byteArray: ByteArray?) -> Unit,
+    private val onCapture: (image: PeekabooCameraImage?) -> Unit,
 ) : NSObject(), AVCapturePhotoCaptureDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -785,6 +786,18 @@ class PhotoCaptureDelegate(
             onCapture(byteArray)
         }
         onCaptureEnd()
+    }
+}
+
+private fun UIImage.toPeekabooCameraImage(): PeekabooCameraImage? {
+    return UIImagePNGRepresentation(this)?.let { imageData ->
+        val (width, height) = this.size.useContents { width to height }
+        
+        PeekabooCameraImage(
+            image = imageData.toByteArray(),
+            height = height.roundToInt(),
+            width = width.roundToInt()
+        )
     }
 }
 
