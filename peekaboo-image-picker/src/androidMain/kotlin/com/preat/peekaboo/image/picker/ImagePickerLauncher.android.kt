@@ -82,6 +82,8 @@ private fun pickSingleImage(
                             onResult(listOf(resizedImage))
                         }
                     }
+                } ?: run {
+                    onResult(emptyList())
                 }
                 imagePickerLauncher?.markPhotoPickerInactive()
             },
@@ -141,6 +143,11 @@ private fun pickMultipleImages(
                         }
                     }
                 }
+
+                if (uriList.isEmpty()) {
+                    onResult(emptyList())
+                }
+
                 imagePickerLauncher?.markPhotoPickerInactive()
             },
         )
