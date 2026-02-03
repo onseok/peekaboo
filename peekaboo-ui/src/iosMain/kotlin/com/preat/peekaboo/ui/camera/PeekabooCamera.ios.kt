@@ -79,6 +79,9 @@ import platform.AVFoundation.position
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
+import platform.CoreImage.CIContext
+import platform.CoreImage.CIImage
+import platform.CoreImage.createCGImage
 import platform.CoreMedia.CMSampleBufferGetImageBuffer
 import platform.CoreMedia.CMSampleBufferRef
 import platform.CoreMedia.kCMPixelFormat_32BGRA
@@ -731,23 +734,25 @@ class CameraFrameAnalyzerDelegate(
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
         output: AVCaptureOutput,
-        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
         didOutputSampleBuffer: CMSampleBufferRef?,
         fromConnection: AVCaptureConnection,
     ) {
         if (onFrame == null) return
 
-        val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
-        CVPixelBufferLockBaseAddress(imageBuffer, 0uL)
-        val baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)
-        val bufferSize = CVPixelBufferGetDataSize(imageBuffer)
-        val data = NSData.dataWithBytes(bytes = baseAddress, length = bufferSize)
-        CVPixelBufferUnlockBaseAddress(imageBuffer, 0uL)
+        val pixelBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
+        val ciImage = CIImage.imageWithCVPixelBuffer(pixelBuffer)
+        val context = CIContext()
+        val cgImage = context.createCGImage(ciImage, fromRect = ciImage.extent) ?: return
+        val uiImage = UIImage(cGImage = cgImage)
+        val pngData: NSData? = UIImagePNGRepresentation(uiImage)
 
-        val bytes = data.toByteArray()
-        onFrame.invoke(bytes)
+        val bytes: ByteArray? = pngData?.toByteArray()
+        if (bytes != null) {
+            onFrame.invoke(bytes)
+        }
     }
 }
+
 
 class PhotoCaptureDelegate(
     private val onCaptureEnd: () -> Unit,
