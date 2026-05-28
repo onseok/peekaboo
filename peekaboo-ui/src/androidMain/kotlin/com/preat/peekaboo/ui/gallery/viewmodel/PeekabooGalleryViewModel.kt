@@ -17,10 +17,10 @@ package com.preat.peekaboo.ui.gallery.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.cash.paging.Pager
-import app.cash.paging.PagingConfig
-import app.cash.paging.PagingData
-import app.cash.paging.cachedIn
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.preat.peekaboo.ui.gallery.model.PeekabooMediaImage
 import com.preat.peekaboo.ui.gallery.repository.PeekabooGalleryRepository
 import kotlinx.coroutines.flow.Flow

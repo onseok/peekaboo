@@ -15,7 +15,7 @@
  */
 package com.preat.peekaboo.ui.gallery.repository
 
-import app.cash.paging.PagingSource
+import androidx.paging.PagingSource
 import com.preat.peekaboo.ui.gallery.model.PeekabooMediaImage
 
 internal interface PeekabooGalleryRepository {

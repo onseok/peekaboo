@@ -13,20 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
-    id("module.publication")
+    alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
-    androidTarget {
-        publishLibraryVariants("release")
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "11"
-            }
+    androidLibrary {
+        namespace = "com.preat.peekaboo.ui"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
+        androidResources {
+            enable = true
         }
     }
 
@@ -40,33 +44,21 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material)
             implementation(libs.components.resources)
-            implementation(libs.paging.common)
-            implementation(libs.paging.compose.common)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.accompanist.permissions)
             implementation(libs.camera.camera2)
             implementation(libs.camera.lifecycle)
             implementation(libs.camera.view)
             implementation(libs.kotlinx.coroutines.guava)
+            implementation(libs.paging.common)
+            implementation(libs.paging.compose.common)
         }
     }
 }
 
-android {
-    namespace = "com.preat.peekaboo.ui"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-    sourceSets["main"].res.srcDirs("src/androidMain/res")
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}

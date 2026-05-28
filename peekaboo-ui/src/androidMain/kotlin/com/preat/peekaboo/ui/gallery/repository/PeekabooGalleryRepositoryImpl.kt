@@ -16,7 +16,7 @@
 package com.preat.peekaboo.ui.gallery.repository
 
 import android.content.Context
-import app.cash.paging.PagingSource
+import androidx.paging.PagingSource
 import com.preat.peekaboo.ui.gallery.datasource.PeekabooGalleryDataSource
 import com.preat.peekaboo.ui.gallery.model.PeekabooMediaImage
 import com.preat.peekaboo.ui.gallery.util.createCursor

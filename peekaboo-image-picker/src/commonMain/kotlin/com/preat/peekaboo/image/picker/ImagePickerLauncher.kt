@@ -46,7 +46,7 @@ data class ResizeOptions(
     val width: Int = DEFAULT_RESIZE_IMAGE_WIDTH,
     val height: Int = DEFAULT_RESIZE_IMAGE_HEIGHT,
     val resizeThresholdBytes: Long = DEFAULT_RESIZE_THRESHOLD_BYTES,
-    @FloatRange(from = 0.0, to = 1.0)
+    @param:FloatRange(from = 0.0, to = 1.0)
     val compressionQuality: Double = 1.0,
 )
 

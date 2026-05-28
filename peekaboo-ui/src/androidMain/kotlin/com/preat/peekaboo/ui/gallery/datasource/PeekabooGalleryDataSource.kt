@@ -15,8 +15,8 @@
  */
 package com.preat.peekaboo.ui.gallery.datasource
 
-import app.cash.paging.PagingSource
-import app.cash.paging.PagingState
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.preat.peekaboo.ui.gallery.model.PeekabooMediaImage
 
 internal class PeekabooGalleryDataSource(

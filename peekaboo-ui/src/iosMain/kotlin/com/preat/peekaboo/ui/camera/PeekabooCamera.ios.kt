@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.BetaInteropApi
-import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.addressOf
@@ -62,21 +61,31 @@ import platform.AVFoundation.AVCapturePhotoCaptureDelegateProtocol
 import platform.AVFoundation.AVCapturePhotoOutput
 import platform.AVFoundation.AVCapturePhotoSettings
 import platform.AVFoundation.AVCaptureSession
+import platform.AVFoundation.AVCaptureSessionPresetHigh
 import platform.AVFoundation.AVCaptureSessionPresetPhoto
+import platform.AVFoundation.AVCaptureTorchModeOff
+import platform.AVFoundation.AVCaptureTorchModeOn
 import platform.AVFoundation.AVCaptureVideoDataOutput
 import platform.AVFoundation.AVCaptureVideoDataOutputSampleBufferDelegateProtocol
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeLeft
 import platform.AVFoundation.AVCaptureVideoOrientationLandscapeRight
 import platform.AVFoundation.AVCaptureVideoOrientationPortrait
 import platform.AVFoundation.AVCaptureVideoPreviewLayer
+import platform.AVFoundation.AVLayerVideoGravityResizeAspect
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.AVVideoCodecKey
 import platform.AVFoundation.AVVideoCodecTypeJPEG
 import platform.AVFoundation.authorizationStatusForMediaType
 import platform.AVFoundation.fileDataRepresentation
+import platform.AVFoundation.hasTorch
+import platform.AVFoundation.isTorchModeSupported
 import platform.AVFoundation.position
+import platform.AVFoundation.torchMode
 import platform.AVFoundation.requestAccessForMediaType
+import platform.CoreGraphics.CGImageGetHeight
+import platform.CoreGraphics.CGImageGetWidth
+import platform.CoreGraphics.CGImageCreateWithImageInRect
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.CoreMedia.CMSampleBufferGetImageBuffer
@@ -84,6 +93,8 @@ import platform.CoreMedia.CMSampleBufferRef
 import platform.CoreMedia.kCMPixelFormat_32BGRA
 import platform.CoreVideo.CVPixelBufferGetBaseAddress
 import platform.CoreVideo.CVPixelBufferGetDataSize
+import platform.CoreVideo.CVPixelBufferGetHeight
+import platform.CoreVideo.CVPixelBufferGetWidth
 import platform.CoreVideo.CVPixelBufferLockBaseAddress
 import platform.CoreVideo.CVPixelBufferUnlockBaseAddress
 import platform.CoreVideo.kCVPixelBufferPixelFormatTypeKey
@@ -103,6 +114,7 @@ import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageOrientation
 import platform.UIKit.UIImagePNGRepresentation
+import platform.UIKit.UIColor
 import platform.UIKit.UIView
 import platform.darwin.DISPATCH_QUEUE_PRIORITY_DEFAULT
 import platform.darwin.NSObject
@@ -125,10 +137,27 @@ private val deviceTypes =
         AVCaptureDeviceTypeBuiltInDuoCamera,
     )
 
+private fun preferredCamera(position: Long): AVCaptureDevice? =
+    (
+        discoverySessionWithDeviceTypes(
+            deviceTypes = listOf(AVCaptureDeviceTypeBuiltInWideAngleCamera),
+            mediaType = AVMediaTypeVideo,
+            position = position,
+        ).devices.firstOrNull()
+            ?: discoverySessionWithDeviceTypes(
+                deviceTypes = deviceTypes,
+                mediaType = AVMediaTypeVideo,
+                position = position,
+            ).devices.firstOrNull()
+    ) as? AVCaptureDevice
+
 @Composable
 actual fun PeekabooCamera(
     state: PeekabooCameraState,
     modifier: Modifier,
+    captureAspectRatio: Float?,
+    previewScaleType: CameraPreviewScaleType,
+    previewOrientationMode: CameraPreviewOrientationMode,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     var cameraAccess: CameraAccess by remember { mutableStateOf(CameraAccess.Undefined) }
@@ -173,6 +202,9 @@ actual fun PeekabooCamera(
                 AuthorizedCamera(
                     state = state,
                     modifier = Modifier.fillMaxSize(),
+                    captureAspectRatio = captureAspectRatio,
+                    previewScaleType = previewScaleType,
+                    previewOrientationMode = previewOrientationMode,
                 )
             }
         }
@@ -188,12 +220,17 @@ actual fun PeekabooCamera(
     progressIndicator: @Composable () -> Unit,
     onCapture: (byteArray: ByteArray?) -> Unit,
     onFrame: ((frame: ByteArray) -> Unit)?,
+    onScannerFrame: ((frame: PeekabooCameraFrame) -> Unit)?,
+    captureAspectRatio: Float?,
+    previewScaleType: CameraPreviewScaleType,
+    previewOrientationMode: CameraPreviewOrientationMode,
     permissionDeniedContent: @Composable () -> Unit,
 ) {
     val state =
         rememberPeekabooCameraState(
             initialCameraMode = cameraMode,
             onFrame = onFrame,
+            onScannerFrame = onScannerFrame,
             onCapture = onCapture,
         )
     Box(
@@ -202,6 +239,9 @@ actual fun PeekabooCamera(
         PeekabooCamera(
             state = state,
             modifier = modifier,
+            captureAspectRatio = captureAspectRatio,
+            previewScaleType = previewScaleType,
+            previewOrientationMode = previewOrientationMode,
         )
         CompatOverlay(
             modifier = Modifier.fillMaxSize(),
@@ -222,10 +262,16 @@ private fun CompatOverlay(
     progressIndicator: @Composable () -> Unit,
 ) {
     Box(modifier = modifier) {
-        captureIcon(state::capture)
-        convertIcon(state::toggleCamera)
+        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+            captureIcon(state::capture)
+        }
+        Box(modifier = Modifier.align(Alignment.TopEnd)) {
+            convertIcon(state::toggleCamera)
+        }
         if (state.isCapturing) {
-            progressIndicator()
+            Box(modifier = Modifier.align(Alignment.Center)) {
+                progressIndicator()
+            }
         }
     }
 }
@@ -241,15 +287,13 @@ private fun BoxScope.AuthorizedCamera(
     var cameraReady by remember { mutableStateOf(false) }
     val camera: AVCaptureDevice? =
         remember {
-            discoverySessionWithDeviceTypes(
-                deviceTypes = deviceTypes,
-                mediaType = AVMediaTypeVideo,
+            preferredCamera(
                 position =
                     when (cameraMode) {
                         CameraMode.Front -> AVCaptureDevicePositionFront
                         CameraMode.Back -> AVCaptureDevicePositionBack
                     },
-            ).devices.firstOrNull() as? AVCaptureDevice
+            )
         }
 
     if (camera != null) {
@@ -282,18 +326,19 @@ private fun BoxScope.AuthorizedCamera(
 private fun AuthorizedCamera(
     state: PeekabooCameraState,
     modifier: Modifier = Modifier,
+    captureAspectRatio: Float? = null,
+    previewScaleType: CameraPreviewScaleType = CameraPreviewScaleType.AspectFill,
+    previewOrientationMode: CameraPreviewOrientationMode = CameraPreviewOrientationMode.FollowDevice,
 ) {
     val camera: AVCaptureDevice? =
         remember {
-            discoverySessionWithDeviceTypes(
-                deviceTypes = deviceTypes,
-                mediaType = AVMediaTypeVideo,
+            preferredCamera(
                 position =
                     when (state.cameraMode) {
                         CameraMode.Front -> AVCaptureDevicePositionFront
                         CameraMode.Back -> AVCaptureDevicePositionBack
                     },
-            ).devices.firstOrNull() as? AVCaptureDevice
+            )
         }
 
     if (camera != null) {
@@ -301,6 +346,9 @@ private fun AuthorizedCamera(
             state = state,
             camera = camera,
             modifier = modifier,
+            captureAspectRatio = captureAspectRatio,
+            previewScaleType = previewScaleType,
+            previewOrientationMode = previewOrientationMode,
         )
     } else {
         Text(
@@ -420,11 +468,7 @@ private fun BoxScope.RealDeviceCamera(
         captureSession.inputs.forEach { captureSession.removeInput(it as AVCaptureInput) }
 
         val newCamera =
-            discoverySessionWithDeviceTypes(
-                deviceTypes,
-                AVMediaTypeVideo,
-                if (isFrontCamera) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack,
-            ).devices.firstOrNull() as? AVCaptureDevice
+            preferredCamera(if (isFrontCamera) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack)
 
         newCamera?.let {
             val newInput =
@@ -498,35 +542,20 @@ private fun BoxScope.RealDeviceCamera(
 
     UIKitView(
         modifier = Modifier.fillMaxSize(),
-        background = Color.Black,
         factory = {
-            val dispatchGroup = dispatch_group_create()
-            val cameraContainer = UIView()
+            val cameraContainer = CameraContainerView()
+            cameraContainer.backgroundColor = UIColor.blackColor
+            cameraContainer.previewLayer = cameraPreviewLayer
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
             cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
-            dispatch_group_enter(dispatchGroup)
-            dispatch_async(
-                dispatch_get_global_queue(
-                    DISPATCH_QUEUE_PRIORITY_DEFAULT.toLong(),
-                    0UL,
-                ),
-            ) {
-                captureSession.startRunning()
-                dispatch_group_leave(dispatchGroup)
-            }
-            dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
-                onCameraReady()
-            }
             cameraContainer
         },
-        onResize = { view: UIView, rect: CValue<CGRect> ->
-            CATransaction.begin()
-            CATransaction.setValue(true, kCATransactionDisableActions)
-            view.layer.setFrame(rect)
-            cameraPreviewLayer.setFrame(rect)
-            CATransaction.commit()
-        },
     )
+    DisposableEffect(captureSession) {
+        onDispose {
+            captureSession.stopRunning()
+        }
+    }
     // Call the triggerCapture lambda when the capture button is clicked
     captureIcon(triggerCapture)
     convertIcon(switchCamera)
@@ -541,6 +570,9 @@ private fun RealDeviceCamera(
     state: PeekabooCameraState,
     camera: AVCaptureDevice,
     modifier: Modifier,
+    captureAspectRatio: Float? = null,
+    previewScaleType: CameraPreviewScaleType = CameraPreviewScaleType.AspectFill,
+    previewOrientationMode: CameraPreviewOrientationMode = CameraPreviewOrientationMode.FollowDevice,
 ) {
     val queue =
         remember {
@@ -549,12 +581,28 @@ private fun RealDeviceCamera(
     val capturePhotoOutput = remember { AVCapturePhotoOutput() }
     val videoOutput = remember { AVCaptureVideoDataOutput() }
 
+    // Defer-resolved holder so the delegate can read the latest preview-layer reference at
+    // capture time (the layer is created below; we'll point the holder at it).
+    val previewLayerHolder = remember { PreviewLayerHolder() }
     val photoCaptureDelegate =
-        remember(state) { PhotoCaptureDelegate(state::stopCapturing, state::onCapture) }
+        remember(state, captureAspectRatio) {
+            PhotoCaptureDelegate(
+                onCaptureEnd = state::stopCapturing,
+                onCapture = state::onCapture,
+                previewLayerProvider = if (captureAspectRatio != null) {
+                    { previewLayerHolder.layer }
+                } else {
+                    { null }
+                },
+            )
+        }
 
     val frameAnalyzerDelegate =
-        remember {
-            CameraFrameAnalyzerDelegate(state.onFrame)
+        remember(state.onFrame, state.onScannerFrame) {
+            CameraFrameAnalyzerDelegate(
+                onFrame = state.onFrame,
+                onScannerFrame = state.onScannerFrame,
+            )
         }
 
     val triggerCapture: () -> Unit = {
@@ -581,7 +629,12 @@ private fun RealDeviceCamera(
     val captureSession: AVCaptureSession =
         remember {
             AVCaptureSession().also { captureSession ->
-                captureSession.sessionPreset = AVCaptureSessionPresetPhoto
+                captureSession.sessionPreset =
+                    if (state.onScannerFrame != null) {
+                        AVCaptureSessionPresetHigh
+                    } else {
+                        AVCaptureSessionPresetPhoto
+                    }
                 val captureDeviceInput: AVCaptureDeviceInput =
                     deviceInputWithDevice(device = camera, error = null)!!
                 captureSession.addInput(captureDeviceInput)
@@ -602,21 +655,22 @@ private fun RealDeviceCamera(
 
     val cameraPreviewLayer =
         remember {
-            AVCaptureVideoPreviewLayer(session = captureSession)
+            AVCaptureVideoPreviewLayer(session = captureSession).also { layer ->
+                previewLayerHolder.layer = layer
+            }
         }
 
-    // Update captureSession with new camera configuration whenever isFrontCamera changed.
+    // Update captureSession with new camera configuration whenever camera mode changes.
     LaunchedEffect(state.cameraMode) {
+        captureSession.activeInputDevice()?.setTorchEnabled(false)
+        state.isTorchEnabled = false
+        state.isTorchAvailable = false
         val dispatchGroup = dispatch_group_create()
         captureSession.beginConfiguration()
         captureSession.inputs.forEach { captureSession.removeInput(it as AVCaptureInput) }
 
         val newCamera =
-            discoverySessionWithDeviceTypes(
-                deviceTypes,
-                AVMediaTypeVideo,
-                if (state.cameraMode == CameraMode.Front) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack,
-            ).devices.firstOrNull() as? AVCaptureDevice
+            preferredCamera(if (state.cameraMode == CameraMode.Front) AVCaptureDevicePositionFront else AVCaptureDevicePositionBack)
 
         newCamera?.let {
             val newInput =
@@ -635,22 +689,44 @@ private fun RealDeviceCamera(
         }
 
         dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
+            applyVideoOrientation(
+                cameraPreviewLayer = cameraPreviewLayer,
+                capturePhotoOutput = capturePhotoOutput,
+                videoOutput = videoOutput,
+                forcedOrientation = previewOrientationMode.toForcedVideoOrientation(),
+            )
+            state.refreshTorchAvailability(captureSession)
             state.onCameraReady()
         }
     }
 
-    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, videoOutput, state) {
-        val listener = OrientationListener(cameraPreviewLayer, capturePhotoOutput, videoOutput)
+    LaunchedEffect(state.isTorchEnabled, state.cameraMode, captureSession) {
+        val activeDevice = state.refreshTorchAvailability(captureSession)
+        val shouldEnableTorch = state.isTorchAvailable && state.isTorchEnabled
+        activeDevice?.setTorchEnabled(shouldEnableTorch)
+    }
+
+    DisposableEffect(cameraPreviewLayer, capturePhotoOutput, videoOutput, state, previewOrientationMode) {
+        val listener =
+            OrientationListener(
+                cameraPreviewLayer = cameraPreviewLayer,
+                capturePhotoOutput = capturePhotoOutput,
+                videoOutput = videoOutput,
+                forcedOrientation = previewOrientationMode.toForcedVideoOrientation(),
+            )
+        listener.applyCurrentOrientation()
         val notificationName = platform.UIKit.UIDeviceOrientationDidChangeNotification
-        NSNotificationCenter.defaultCenter.addObserver(
-            observer = listener,
-            selector =
-                NSSelectorFromString(
-                    OrientationListener::orientationDidChange.name + ":",
-                ),
-            name = notificationName,
-            `object` = null,
-        )
+        if (previewOrientationMode == CameraPreviewOrientationMode.FollowDevice) {
+            NSNotificationCenter.defaultCenter.addObserver(
+                observer = listener,
+                selector =
+                    NSSelectorFromString(
+                        OrientationListener::orientationDidChange.name + ":",
+                    ),
+                name = notificationName,
+                `object` = null,
+            )
+        }
         onDispose {
             state.triggerCaptureAnchor = null
             NSNotificationCenter.defaultCenter.removeObserver(
@@ -663,44 +739,99 @@ private fun RealDeviceCamera(
 
     UIKitView(
         modifier = modifier,
-        background = Color.Black,
         factory = {
-            val dispatchGroup = dispatch_group_create()
-            val cameraContainer = UIView()
+            val cameraContainer = CameraContainerView()
+            cameraContainer.backgroundColor = UIColor.blackColor
+            cameraContainer.previewLayer = cameraPreviewLayer
             cameraContainer.layer.addSublayer(cameraPreviewLayer)
-            cameraPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill
-            dispatch_group_enter(dispatchGroup)
-            dispatch_async(queue) {
-                captureSession.startRunning()
-                dispatch_group_leave(dispatchGroup)
-            }
-            dispatch_group_notify(dispatchGroup, dispatch_get_main_queue()) {
-                state.onCameraReady()
-            }
+            cameraPreviewLayer.videoGravity = previewScaleType.toAvLayerVideoGravity()
             cameraContainer
         },
-        onResize = { view: UIView, rect: CValue<CGRect> ->
-            CATransaction.begin()
-            CATransaction.setValue(true, kCATransactionDisableActions)
-            view.layer.setFrame(rect)
-            cameraPreviewLayer.setFrame(rect)
-            CATransaction.commit()
-        },
     )
+    DisposableEffect(captureSession) {
+        onDispose {
+            captureSession.activeInputDevice()?.setTorchEnabled(false)
+            state.isTorchEnabled = false
+            state.isTorchAvailable = false
+            captureSession.stopRunning()
+        }
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private class CameraContainerView : UIView(frame = CGRectMake(0.0, 0.0, 0.0, 0.0)) {
+    var previewLayer: AVCaptureVideoPreviewLayer? = null
+
+    override fun layoutSubviews() {
+        super.layoutSubviews()
+        val layer = previewLayer ?: return
+        CATransaction.begin()
+        CATransaction.setValue(true, kCATransactionDisableActions)
+        layer.frame = bounds
+        CATransaction.commit()
+    }
 }
 
 class OrientationListener(
     private val cameraPreviewLayer: AVCaptureVideoPreviewLayer,
     private val capturePhotoOutput: AVCapturePhotoOutput,
     private val videoOutput: AVCaptureVideoDataOutput,
+    private val forcedOrientation: Long? = null,
 ) : NSObject() {
     @OptIn(BetaInteropApi::class)
     @Suppress("UNUSED_PARAMETER")
     @ObjCAction
     fun orientationDidChange(arg: NSNotification) {
-        val cameraConnection = cameraPreviewLayer.connection
-        val actualOrientation =
-            when (UIDevice.currentDevice.orientation) {
+        applyCurrentOrientation()
+    }
+
+    fun applyCurrentOrientation() {
+        applyVideoOrientation(cameraPreviewLayer, capturePhotoOutput, videoOutput, forcedOrientation)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun AVCaptureSession.activeInputDevice(): AVCaptureDevice? =
+    (inputs.firstOrNull { it is AVCaptureDeviceInput } as? AVCaptureDeviceInput)?.device
+
+@OptIn(ExperimentalForeignApi::class)
+private fun PeekabooCameraState.refreshTorchAvailability(captureSession: AVCaptureSession): AVCaptureDevice? {
+    val activeDevice = captureSession.activeInputDevice()
+    val available = cameraMode == CameraMode.Back && (activeDevice?.hasTorch == true)
+    isTorchAvailable = available
+    if (!available && isTorchEnabled) {
+        isTorchEnabled = false
+    }
+    return activeDevice
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun AVCaptureDevice.setTorchEnabled(enabled: Boolean) {
+    if (!hasTorch) return
+    if (enabled && !isTorchModeSupported(AVCaptureTorchModeOn)) return
+    if (!lockForConfiguration(null)) return
+    try {
+        torchMode =
+            if (enabled) {
+                AVCaptureTorchModeOn
+            } else {
+                AVCaptureTorchModeOff
+            }
+    } finally {
+        unlockForConfiguration()
+    }
+}
+
+private fun applyVideoOrientation(
+    cameraPreviewLayer: AVCaptureVideoPreviewLayer,
+    capturePhotoOutput: AVCapturePhotoOutput,
+    videoOutput: AVCaptureVideoDataOutput,
+    forcedOrientation: Long?,
+) {
+    val cameraConnection = cameraPreviewLayer.connection
+    val actualOrientation =
+        forcedOrientation
+            ?: when (UIDevice.currentDevice.orientation) {
                 UIDeviceOrientation.UIDeviceOrientationPortrait ->
                     AVCaptureVideoOrientationPortrait
 
@@ -715,18 +846,22 @@ class OrientationListener(
 
                 else -> cameraConnection?.videoOrientation ?: AVCaptureVideoOrientationPortrait
             }
-        if (cameraConnection != null) {
-            cameraConnection.videoOrientation = actualOrientation
-        }
-        capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
-            ?.videoOrientation = actualOrientation
-        videoOutput.connectionWithMediaType(AVMediaTypeVideo)
-            ?.videoOrientation = actualOrientation
+    cameraConnection?.setVideoOrientationIfChanged(actualOrientation)
+    capturePhotoOutput.connectionWithMediaType(AVMediaTypeVideo)
+        ?.setVideoOrientationIfChanged(actualOrientation)
+    videoOutput.connectionWithMediaType(AVMediaTypeVideo)
+        ?.setVideoOrientationIfChanged(actualOrientation)
+}
+
+private fun AVCaptureConnection.setVideoOrientationIfChanged(orientation: Long) {
+    if (videoOrientation != orientation) {
+        videoOrientation = orientation
     }
 }
 
 class CameraFrameAnalyzerDelegate(
     private val onFrame: ((frame: ByteArray) -> Unit)?,
+    private val onScannerFrame: ((frame: PeekabooCameraFrame) -> Unit)?,
 ) : NSObject(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -735,9 +870,23 @@ class CameraFrameAnalyzerDelegate(
         didOutputSampleBuffer: CMSampleBufferRef?,
         fromConnection: AVCaptureConnection,
     ) {
-        if (onFrame == null) return
+        if (onFrame == null && onScannerFrame == null) return
 
         val imageBuffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer) ?: return
+        onScannerFrame?.invoke(
+            PeekabooCameraFrame(
+                sourcePixelBuffer = imageBuffer,
+                metadata =
+                    PeekabooFrameMetadata(
+                        width = CVPixelBufferGetWidth(imageBuffer).toInt(),
+                        height = CVPixelBufferGetHeight(imageBuffer).toInt(),
+                        rotationDegrees = fromConnection.toRotationDegrees(),
+                        timestampMillis = 0L,
+                    ),
+            ),
+        )
+        if (onFrame == null) return
+
         CVPixelBufferLockBaseAddress(imageBuffer, 0uL)
         val baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)
         val bufferSize = CVPixelBufferGetDataSize(imageBuffer)
@@ -749,9 +898,38 @@ class CameraFrameAnalyzerDelegate(
     }
 }
 
+/**
+ * Mutable holder so the [PhotoCaptureDelegate] can read the latest preview-layer reference at
+ * capture time without having to recreate the delegate when the layer is created.
+ */
+class PreviewLayerHolder {
+    var layer: AVCaptureVideoPreviewLayer? = null
+}
+
+private fun AVCaptureConnection?.toRotationDegrees(): Int =
+    when (this?.videoOrientation) {
+        AVCaptureVideoOrientationLandscapeLeft -> 0
+        AVCaptureVideoOrientationLandscapeRight -> 180
+        AVCaptureVideoOrientationPortrait -> 90
+        else -> 0
+    }
+
+private fun CameraPreviewScaleType.toAvLayerVideoGravity(): String? =
+    when (this) {
+        CameraPreviewScaleType.AspectFill -> AVLayerVideoGravityResizeAspectFill
+        CameraPreviewScaleType.AspectFit -> AVLayerVideoGravityResizeAspect
+    }
+
+private fun CameraPreviewOrientationMode.toForcedVideoOrientation(): Long? =
+    when (this) {
+        CameraPreviewOrientationMode.FollowDevice -> null
+        CameraPreviewOrientationMode.Portrait -> AVCaptureVideoOrientationPortrait
+    }
+
 class PhotoCaptureDelegate(
     private val onCaptureEnd: () -> Unit,
     private val onCapture: (byteArray: ByteArray?) -> Unit,
+    private val previewLayerProvider: () -> AVCaptureVideoPreviewLayer? = { null },
 ) : NSObject(), AVCapturePhotoCaptureDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun captureOutput(
@@ -780,12 +958,59 @@ class PhotoCaptureDelegate(
                 UIGraphicsEndImageContext()
                 uiImage = normalizedImage!!
             }
+
+            // Apple's recommended approach: convert the visible preview-layer rect to normalized
+            // capture-output coordinates, then crop the captured image to that rect. This makes
+            // the saved photo match what the preview layer was displaying.
+            // https://developer.apple.com/documentation/avfoundation/avcapturevideopreviewlayer/1623501-metadataoutputrectconverted
+            val previewLayer = previewLayerProvider()
+            if (previewLayer != null) {
+                cropImageToPreviewLayer(uiImage, previewLayer)?.let { uiImage = it }
+            }
+
             val imageData = UIImagePNGRepresentation(uiImage)
             val byteArray: ByteArray? = imageData?.toByteArray()
             onCapture(byteArray)
         }
         onCaptureEnd()
     }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun cropImageToPreviewLayer(
+    image: UIImage,
+    previewLayer: AVCaptureVideoPreviewLayer,
+): UIImage? {
+    val layerSize = previewLayer.bounds.useContents { size.width to size.height }
+    if (layerSize.first <= 0.0 || layerSize.second <= 0.0) return null
+
+    // Normalized rect in [0,1] of the captured image describing the visible preview area.
+    // Apple's K/N name for `metadataOutputRectConverted(fromLayerRect:)` is
+    // `metadataOutputRectOfInterestForRect(_:)` (the Objective-C selector).
+    val outputRect = previewLayer.metadataOutputRectOfInterestForRect(previewLayer.bounds)
+    val rectInfo = outputRect.useContents {
+        listOf(origin.x, origin.y, size.width, size.height)
+    }
+    val originX = rectInfo[0]
+    val originY = rectInfo[1]
+    val rectWidth = rectInfo[2]
+    val rectHeight = rectInfo[3]
+    if (rectWidth <= 0.0 || rectHeight <= 0.0) return null
+
+    val cgImage = image.CGImage ?: return null
+    val pixelWidth = CGImageGetWidth(cgImage).toDouble()
+    val pixelHeight = CGImageGetHeight(cgImage).toDouble()
+    if (pixelWidth <= 0.0 || pixelHeight <= 0.0) return null
+
+    val cropX = (originX * pixelWidth).coerceIn(0.0, pixelWidth - 1.0)
+    val cropY = (originY * pixelHeight).coerceIn(0.0, pixelHeight - 1.0)
+    val cropWidth = (rectWidth * pixelWidth).coerceAtMost(pixelWidth - cropX)
+    val cropHeight = (rectHeight * pixelHeight).coerceAtMost(pixelHeight - cropY)
+    if (cropWidth < 1.0 || cropHeight < 1.0) return null
+
+    val cropRect = CGRectMake(cropX, cropY, cropWidth, cropHeight)
+    val croppedCgImage = CGImageCreateWithImageInRect(cgImage, cropRect) ?: return null
+    return UIImage.imageWithCGImage(croppedCgImage, image.scale, image.imageOrientation)
 }
 
 @OptIn(ExperimentalForeignApi::class)

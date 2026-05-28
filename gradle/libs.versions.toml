@@ -1,31 +1,30 @@
 [versions]
-agp = "8.3.2"
-kotlin = "1.9.23"
-kotlinx-coroutines = "1.8.0"
-compose = "1.6.11"
-compose-compiler = "1.5.13"
-compose-ui = "1.6.7"
-compose-foundation = "1.6.7"
-compose-material3 = "1.2.1"
-androidx-activityCompose = "1.8.2"
-androidx-lifecycleViewmodelCompose = "2.7.0"
-androidx-annotation = "1.7.1"
+agp = "9.1.0"
+kotlin = "2.3.10"
+kotlinx-coroutines = "1.10.2"
+compose = "1.10.1"
+compose-ui = "1.7.3"
+compose-foundation = "1.7.3"
+compose-material3 = "1.3.1"
+androidx-activityCompose = "1.11.0"
+androidx-lifecycleViewmodelCompose = "2.9.4"
+androidx-annotation = "1.9.1"
 nexus-publish = "2.0.0"
 spotless = "6.25.0"
-ktlint = "1.0.1"
+ktlint = "1.6.0"
 
 android-minSdk = "24"
-android-compileSdk = "34"
+android-compileSdk = "36"
 core-ktx = "1.12.0"
 junit = "4.13.2"
 androidx-test-ext-junit = "1.1.5"
 espresso-core = "3.5.1"
 appcompat = "1.6.1"
 material = "1.11.0"
-accompanist = "0.34.0"
-camerax = "1.3.2"
+accompanist = "0.36.0"
+camerax = "1.5.0-alpha06"
 exifinterface = "1.3.7"
-multiplatform-paging = "3.3.0-alpha02-0.5.1"
+multiplatform-paging = "3.4.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -51,13 +50,15 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
-paging-common = { module = "app.cash.paging:paging-common", version.ref = "multiplatform-paging" }
-paging-compose-common = { module = "app.cash.paging:paging-compose-common", version.ref = "multiplatform-paging" }
+paging-common = { module = "androidx.paging:paging-common", version.ref = "multiplatform-paging" }
+paging-compose-common = { module = "androidx.paging:paging-compose", version.ref = "multiplatform-paging" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
